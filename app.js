@@ -1,8 +1,14 @@
 const els = {
+  entryScreen: document.querySelector("#entryScreen"),
+  setupScreen: document.querySelector("#setupScreen"),
+  bracketScreen: document.querySelector("#bracketScreen"),
   playersInput: document.querySelector("#playersInput"),
   playerCount: document.querySelector("#playerCount"),
   teamCount: document.querySelector("#teamCount"),
   teamList: document.querySelector("#teamList"),
+  toSetupBtn: document.querySelector("#toSetupBtn"),
+  backToEntryBtn: document.querySelector("#backToEntryBtn"),
+  backToSetupBtn: document.querySelector("#backToSetupBtn"),
   pairBtn: document.querySelector("#pairBtn"),
   clearBtn: document.querySelector("#clearBtn"),
   sampleBtn: document.querySelector("#sampleBtn"),
@@ -12,6 +18,8 @@ const els = {
   courtCount: document.querySelector("#courtCount"),
   poolCount: document.querySelector("#poolCount"),
   poolAdvancers: document.querySelector("#poolAdvancers"),
+  poolOptions: document.querySelectorAll(".pool-option"),
+  formatInputs: document.querySelectorAll("input[name='format']"),
   tournamentTitle: document.querySelector("#tournamentTitle"),
   statTeams: document.querySelector("#statTeams"),
   statMatches: document.querySelector("#statMatches"),
@@ -72,6 +80,28 @@ function shuffle(items) {
 
 function currentFormat() {
   return document.querySelector("input[name='format']:checked").value;
+}
+
+function showScreen(screen) {
+  els.entryScreen.classList.toggle("active", screen === "entry");
+  els.setupScreen.classList.toggle("active", screen === "setup");
+  els.bracketScreen.classList.toggle("active", screen === "bracket");
+  document.body.classList.toggle("bracket-mode", screen === "bracket");
+}
+
+function updateFormatOptions() {
+  const isPool = currentFormat() === "pool";
+  els.poolOptions.forEach((option) => option.classList.toggle("hidden", !isPool));
+}
+
+function continueToSetup() {
+  const players = getPlayers();
+  if (players.length < 2) {
+    window.alert("Add at least two players to build teams.");
+    return;
+  }
+  createTeams();
+  showScreen("setup");
 }
 
 function teamName(team) {
@@ -157,6 +187,10 @@ function generateTournament() {
   if (state.teams.length < 2) {
     createTeams();
   }
+  if (state.teams.length < 2) {
+    window.alert("You need at least two players to generate a bracket.");
+    return;
+  }
 
   state.format = currentFormat();
   state.courts = Math.max(1, Number.parseInt(els.courtCount.value, 10) || 1);
@@ -185,6 +219,7 @@ function generateTournament() {
   }
 
   renderAll();
+  showScreen("bracket");
 }
 
 function makeRoundRobinMatches(teamIds, pool, label) {
@@ -540,6 +575,9 @@ function exportTournament() {
 }
 
 els.playersInput.addEventListener("input", renderAll);
+els.toSetupBtn.addEventListener("click", continueToSetup);
+els.backToEntryBtn.addEventListener("click", () => showScreen("entry"));
+els.backToSetupBtn.addEventListener("click", () => showScreen("setup"));
 els.pairBtn.addEventListener("click", createTeams);
 els.generateBtn.addEventListener("click", generateTournament);
 els.clearBtn.addEventListener("click", () => {
@@ -549,10 +587,11 @@ els.clearBtn.addEventListener("click", () => {
 });
 els.sampleBtn.addEventListener("click", () => {
   els.playersInput.value = samplePlayers.join("\n");
-  createTeams();
+  renderAll();
 });
 els.printBtn.addEventListener("click", () => window.print());
 els.exportBtn.addEventListener("click", exportTournament);
+els.formatInputs.forEach((input) => input.addEventListener("change", updateFormatOptions));
 els.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     els.tabs.forEach((item) => item.classList.toggle("active", item === tab));
@@ -560,4 +599,6 @@ els.tabs.forEach((tab) => {
   });
 });
 
+showScreen("entry");
+updateFormatOptions();
 renderAll();

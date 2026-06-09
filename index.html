@@ -7,86 +7,111 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <div class="mark" aria-hidden="true">U</div>
-        <div>
-          <p class="eyebrow">Tournament Desk</p>
-          <h1>Godfather's Horseshoe Bracket</h1>
+    <main class="app-flow">
+      <section class="flow-screen active" id="entryScreen" aria-label="Add players">
+        <div class="flow-card entry-card">
+          <div class="brand">
+            <div class="mark" aria-hidden="true">U</div>
+            <div>
+              <p class="eyebrow">Step 1</p>
+              <h1>Godfather's Horseshoe Bracket</h1>
+            </div>
+          </div>
+          <div class="entry-grid">
+            <div>
+              <h2>Add Players</h2>
+              <p class="note">Enter one player per line. The next screen will randomize everyone into teams of two.</p>
+              <textarea id="playersInput" spellcheck="false" placeholder="One player per line"></textarea>
+              <div class="helper-row">
+                <button class="ghost" id="sampleBtn" type="button">Load sample</button>
+                <button class="ghost" id="clearBtn" type="button">Clear</button>
+              </div>
+            </div>
+            <div class="entry-summary">
+              <div class="section-title">
+                <span>Players entered</span>
+                <strong id="playerCount">0</strong>
+              </div>
+              <div class="horseshoe-visual" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <button class="primary wide" id="toSetupBtn" type="button">Continue to teams</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="actions">
-        <button class="ghost" id="sampleBtn" type="button">Load sample</button>
-        <button class="ghost" id="printBtn" type="button">Print</button>
-        <button class="primary" id="exportBtn" type="button">Export JSON</button>
-      </div>
-    </header>
+      </section>
 
-    <main class="layout">
-      <aside class="setup-panel" aria-label="Tournament setup">
-        <section class="panel-section">
-          <div class="section-title">
-            <span>Players</span>
-            <strong id="playerCount">0</strong>
-          </div>
-          <textarea id="playersInput" spellcheck="false" placeholder="One player per line"></textarea>
-          <div class="helper-row">
-            <button class="primary" id="pairBtn" type="button">Randomize teams</button>
-            <button class="ghost" id="clearBtn" type="button">Clear</button>
-          </div>
-          <p class="note">Teams are paired randomly from the player list. If the player count is odd, one person is kept as an alternate.</p>
-        </section>
+      <section class="flow-screen" id="setupScreen" aria-label="Randomize teams and choose format">
+        <div class="flow-card setup-card">
+          <header class="flow-header">
+            <div>
+              <p class="eyebrow">Step 2</p>
+              <h1>Randomize Teams</h1>
+            </div>
+            <div class="actions">
+              <button class="ghost" id="backToEntryBtn" type="button">Back</button>
+              <button class="primary" id="pairBtn" type="button">Randomize again</button>
+            </div>
+          </header>
 
-        <section class="panel-section">
-          <div class="section-title">
-            <span>Format</span>
-          </div>
-          <div class="format-grid" role="radiogroup" aria-label="Tournament format">
-            <label><input type="radio" name="format" value="single" checked /> Single elimination</label>
-            <label><input type="radio" name="format" value="double" /> Double elimination</label>
-            <label><input type="radio" name="format" value="roundRobin" /> Round robin</label>
-            <label><input type="radio" name="format" value="pool" /> Pool to bracket</label>
-          </div>
-          <div class="options-grid">
-            <label>
-              Courts
-              <input id="courtCount" type="number" min="1" max="12" value="2" />
-            </label>
-            <label>
-              Pools
-              <input id="poolCount" type="number" min="2" max="8" value="2" />
-            </label>
-            <label>
-              Pool advancers
-              <input id="poolAdvancers" type="number" min="1" max="4" value="2" />
-            </label>
-          </div>
-          <button class="primary wide" id="generateBtn" type="button">Generate tournament</button>
-        </section>
+          <div class="setup-grid">
+            <section class="panel-section compact">
+              <div class="section-title">
+                <span>Teams</span>
+                <strong id="teamCount">0</strong>
+              </div>
+              <ol class="team-list" id="teamList"></ol>
+            </section>
 
-        <section class="panel-section compact">
-          <div class="section-title">
-            <span>Teams</span>
-            <strong id="teamCount">0</strong>
+            <section class="panel-section">
+              <div class="section-title">
+                <span>Bracket type</span>
+              </div>
+              <div class="format-grid" role="radiogroup" aria-label="Tournament format">
+                <label><input type="radio" name="format" value="single" checked /> Single elimination</label>
+                <label><input type="radio" name="format" value="double" /> Double elimination</label>
+                <label><input type="radio" name="format" value="roundRobin" /> Round robin</label>
+                <label><input type="radio" name="format" value="pool" /> Pool to bracket</label>
+              </div>
+              <div class="options-grid">
+                <label>
+                  Courts
+                  <input id="courtCount" type="number" min="1" max="12" value="2" />
+                </label>
+                <label class="pool-option">
+                  Pools
+                  <input id="poolCount" type="number" min="2" max="8" value="2" />
+                </label>
+                <label class="pool-option">
+                  Pool advancers
+                  <input id="poolAdvancers" type="number" min="1" max="4" value="2" />
+                </label>
+              </div>
+              <button class="primary wide" id="generateBtn" type="button">Open full screen bracket</button>
+            </section>
           </div>
-          <ol class="team-list" id="teamList"></ol>
-        </section>
-      </aside>
+        </div>
+      </section>
 
-      <section class="workspace">
-        <div class="scoreboard">
+      <section class="tournament-screen" id="bracketScreen" aria-label="Full screen tournament bracket">
+        <header class="bracket-topbar">
           <div>
-            <p class="eyebrow">Ready board</p>
-            <h2 id="tournamentTitle">Build your bracket</h2>
+            <p class="eyebrow">Live Board</p>
+            <h1 id="tournamentTitle">Build your bracket</h1>
           </div>
           <div class="stat-row">
             <div><span id="statTeams">0</span><small>Teams</small></div>
             <div><span id="statMatches">0</span><small>Matches</small></div>
             <div><span id="statCourts">2</span><small>Courts</small></div>
           </div>
-        </div>
+          <div class="actions">
+            <button class="ghost" id="backToSetupBtn" type="button">Setup</button>
+            <button class="ghost" id="printBtn" type="button">Print</button>
+            <button class="primary" id="exportBtn" type="button">Export JSON</button>
+          </div>
+        </header>
 
-        <div class="tabs" role="tablist" aria-label="Tournament views">
+        <div class="tabs bracket-tabs" role="tablist" aria-label="Tournament views">
           <button class="tab active" data-view="bracket" type="button">Bracket</button>
           <button class="tab" data-view="schedule" type="button">Schedule</button>
           <button class="tab" data-view="standings" type="button">Standings</button>
@@ -94,21 +119,17 @@
 
         <section class="view active" id="bracketView" aria-label="Bracket view">
           <div class="empty-state" id="emptyState">
-            <div class="horseshoe-visual" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <h2>Put the player names in, then randomize teams.</h2>
-            <p>Pick single elimination, double elimination, round robin, or pool play into a bracket. Scores entered here update winners and standings.</p>
+            <h2>Generate the tournament to fill the board.</h2>
           </div>
-          <div id="bracketBoard" class="bracket-board"></div>
+          <div id="bracketBoard" class="bracket-board full-board"></div>
         </section>
 
         <section class="view" id="scheduleView" aria-label="Schedule view">
-          <div id="scheduleBoard" class="schedule-board"></div>
+          <div id="scheduleBoard" class="schedule-board full-list"></div>
         </section>
 
         <section class="view" id="standingsView" aria-label="Standings view">
-          <div id="standingsBoard" class="standings-board"></div>
+          <div id="standingsBoard" class="standings-board full-list"></div>
         </section>
       </section>
     </main>
