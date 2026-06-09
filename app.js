@@ -146,9 +146,23 @@ function createTeams() {
   renderAll();
 }
 
-function makeMatch({ round, label, a = null, b = null, type = "bracket", pool = null }) {
+let matchCounter = 0;
+
+function makeMatch({
+  round,
+  label,
+  a = null,
+  b = null,
+  type = "bracket",
+  pool = null,
+  side = "winners",
+  matchNum = null,
+}) {
+  matchCounter += 1;
+  const num = matchNum ?? matchCounter;
   return {
-    id: `match-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `match-${num}`,
+    matchNum: num,
     round,
     label,
     a,
@@ -158,9 +172,282 @@ function makeMatch({ round, label, a = null, b = null, type = "bracket", pool = 
     winner: null,
     loser: null,
     type,
+    side,
     pool,
     court: ((state.matches.length % state.courts) + 1),
+    winnerTo: null,
+    loserTo: null,
   };
+}
+
+function nextPow2(count) {
+  if (count <= 1) return 2;
+  return 2 ** Math.ceil(Math.log2(count));
+}
+
+function paddedSeeds(teamIds) {
+  const size = nextPow2(teamIds.length);
+  const seeds = teamIds.slice();
+  while (seeds.length < size) seeds.push(null);
+  return seeds;
+}
+
+function buildSingleElimBracket(teamIds) {
+  const seeds = paddedSeeds(teamIds);
+  const matches = [];
+  let prevRound = [];
+
+  for (let index = 0; index < seeds.length; index += 2) {
+    const match = makeMatch({
+      round: 1,
+      label: "Round 1",
+      a: seeds[index],
+      b: seeds[index + 1],
+      side: "winners",
+    });
+    if (seeds[index] && !seeds[index + 1]) {
+      match.winner = seeds[index];
+      match.scoreA = "1";
+      match.scoreB = "0";
+    }
+    prevRound.push(match);
+    matches.push(match);
+  }
+
+  let round = 2;
+  while (prevRound.length > 1) {
+    const nextRound = [];
+    for (let index = 0; index < prevRound.length; index += 2) {
+      const match = makeMatch({
+        round,
+        label: prevRound.length === 2 ? "Semifinals" : `Round ${round}`,
+        side: "winners",
+      });
+      prevRound[index].winnerTo = { matchId: match.id, slot: "a" };
+      prevRound[index + 1].winnerTo = { matchId: match.id, slot: "b" };
+      nextRound.push(match);
+      matches.push(match);
+    }
+    prevRound = nextRound;
+    round += 1;
+  }
+
+  const finalMatch = prevRound[0];
+  if (finalMatch) finalMatch.label = "Championship";
+
+  refreshBracketProgression(matches);
+  return matches;
+}
+
+function buildDoubleElimBracket(teamIds) {
+  const size = nextPow2(teamIds.length);
+  const seeds = paddedSeeds(teamIds);
+  const matches = [];
+  const wbRounds = [];
+
+  const wb1 = [];
+  for (let index = 0; index < size; index += 2) {
+    const match = makeMatch({
+      round: 1,
+      label: "Winners R1",
+      a: seeds[index],
+      b: seeds[index + 1],
+      side: "winners",
+    });
+    if (seeds[index] && !seeds[index + 1]) {
+      match.winner = seeds[index];
+      match.scoreA = "1";
+      match.scoreB = "0";
+    }
+    wb1.push(match);
+    matches.push(match);
+  }
+  wbRounds.push(wb1);
+
+  let prevRound = wb1;
+  let wbRound = 2;
+  while (prevRound.length > 1) {
+    const round = [];
+    for (let index = 0; index < prevRound.length; index += 2) {
+      const match = makeMatch({
+        round: wbRound,
+        label: prevRound.length === 2 ? "Winners Final" : `Winners R${wbRound}`,
+        side: "winners",
+      });
+      prevRound[index].winnerTo = { matchId: match.id, slot: "a" };
+      prevRound[index + 1].winnerTo = { matchId: match.id, slot: "b" };
+      round.push(match);
+      matches.push(match);
+    }
+    wbRounds.push(round);
+    prevRound = round;
+    wbRound += 1;
+  }
+  const winnersFinal = prevRound[0];
+
+  const lbRounds = [];
+  let lbRound = 1;
+  const lb1 = [];
+  for (let index = 0; index < wb1.length; index += 2) {
+    const match = makeMatch({
+      round: lbRound,
+      label: `Losers R${lbRound}`,
+      side: "losers",
+    });
+    wb1[index].loserTo = { matchId: match.id, slot: "a" };
+    wb1[index + 1].loserTo = { matchId: match.id, slot: "b" };
+    lb1.push(match);
+    matches.push(match);
+  }
+  lbRounds.push(lb1);
+  lbRound += 1;
+
+  let currentLb = lb1;
+  for (let wbIndex = 1; wbIndex < wbRounds.length; wbIndex += 1) {
+    const wbRoundMatches = wbRounds[wbIndex];
+    const dropRound = [];
+    wbRoundMatches.forEach((wbMatch, index) => {
+      const match = makeMatch({
+        round: lbRound,
+        label: `Losers R${lbRound}`,
+        side: "losers",
+      });
+      if (currentLb[index]) {
+        currentLb[index].winnerTo = { matchId: match.id, slot: "a" };
+      }
+      wbMatch.loserTo = { matchId: match.id, slot: "b" };
+      dropRound.push(match);
+      matches.push(match);
+    });
+    lbRounds.push(dropRound);
+    lbRound += 1;
+
+    if (dropRound.length > 1) {
+      const mergeRound = [];
+      for (let index = 0; index < dropRound.length; index += 2) {
+        const match = makeMatch({
+          round: lbRound,
+          label: `Losers R${lbRound}`,
+          side: "losers",
+        });
+        dropRound[index].winnerTo = { matchId: match.id, slot: "a" };
+        dropRound[index + 1].winnerTo = { matchId: match.id, slot: "b" };
+        mergeRound.push(match);
+        matches.push(match);
+      }
+      lbRounds.push(mergeRound);
+      lbRound += 1;
+      currentLb = mergeRound;
+    } else {
+      currentLb = dropRound;
+    }
+  }
+
+  const losersFinal = makeMatch({
+    round: lbRound,
+    label: "Losers Final",
+    side: "losers",
+  });
+  currentLb[0].winnerTo = { matchId: losersFinal.id, slot: "a" };
+  winnersFinal.loserTo = { matchId: losersFinal.id, slot: "b" };
+  matches.push(losersFinal);
+
+  const grandFinal = makeMatch({
+    round: 1,
+    label: "Grand Final",
+    side: "grand",
+  });
+  winnersFinal.winnerTo = { matchId: grandFinal.id, slot: "a" };
+  losersFinal.winnerTo = { matchId: grandFinal.id, slot: "b" };
+  matches.push(grandFinal);
+
+  matches.push(makeMatch({
+    round: 1,
+    label: "Grand Final (if necessary)",
+    side: "reset",
+  }));
+
+  refreshBracketProgression(matches);
+  return matches;
+}
+
+function getBracketTreeMatches() {
+  return state.matches.filter((match) => match.type === "bracket" && match.side !== "reset");
+}
+
+function seedRoundFor(matches) {
+  const winners = matches.filter((match) => match.side === "winners");
+  if (!winners.length) return 1;
+  return Math.min(...winners.map((match) => match.round));
+}
+
+function bracketSeed(teamId) {
+  const seedRound = seedRoundFor(state.matches);
+  const roundOne = state.matches
+    .filter((match) => match.side === "winners" && match.round === seedRound)
+    .sort((left, right) => left.matchNum - right.matchNum);
+  let seed = 1;
+  for (const match of roundOne) {
+    if (match.a === teamId) return seed;
+    seed += 1;
+    if (match.b === teamId) return seed;
+    seed += 1;
+  }
+  return null;
+}
+
+function refreshBracketProgression(matchList = state.matches) {
+  const bracketMatches = matchList.filter((match) => match.type === "bracket" && match.side !== "reset");
+  const seedRound = seedRoundFor(bracketMatches);
+
+  bracketMatches.forEach((match) => {
+    if (!(match.side === "winners" && match.round === seedRound)) {
+      match.a = null;
+      match.b = null;
+    }
+    match.winner = null;
+    match.loser = null;
+  });
+
+  bracketMatches
+    .filter((match) => match.side === "winners" && match.round === seedRound)
+    .forEach((match) => {
+      if (match.a && !match.b) {
+        match.winner = match.a;
+        match.loser = null;
+      }
+    });
+
+  const sorted = [...bracketMatches].sort((left, right) => left.matchNum - right.matchNum);
+  sorted.forEach((match) => {
+    completeMatch(match);
+    if (match.winner && match.winnerTo) {
+      const child = matchList.find((item) => item.id === match.winnerTo.matchId);
+      if (child) child[match.winnerTo.slot] = match.winner;
+    }
+    if (match.loser && match.loserTo) {
+      const child = matchList.find((item) => item.id === match.loserTo.matchId);
+      if (child) child[match.loserTo.slot] = match.loser;
+    }
+  });
+
+  sorted.forEach((match) => completeMatch(match));
+}
+
+function feederLabel(matchId, slot) {
+  const winnerFeeder = state.matches.find(
+    (match) => match.winnerTo?.matchId === matchId && match.winnerTo?.slot === slot,
+  );
+  if (winnerFeeder) {
+    return { text: `Winner of ${winnerFeeder.matchNum}`, placeholder: true };
+  }
+  const loserFeeder = state.matches.find(
+    (match) => match.loserTo?.matchId === matchId && match.loserTo?.slot === slot,
+  );
+  if (loserFeeder) {
+    return { text: `Loser of ${loserFeeder.matchNum}`, placeholder: true };
+  }
+  return { text: "TBD", placeholder: true };
 }
 
 function makePairMatches(teamIds, round, label, type = "bracket", pool = null) {
@@ -198,17 +485,21 @@ function generateTournament() {
   state.pools = [];
   state.bracketStarted = false;
   state.teams = state.teams.map((team) => ({ ...team, losses: 0, pool: null }));
+  matchCounter = 0;
 
   const teamIds = state.teams.map((team) => team.id);
 
   if (state.format === "single") {
-    state.matches = makePairMatches(teamIds, 1, "Round 1");
-    advanceSingle();
+    state.matches = buildSingleElimBracket(teamIds);
   }
 
   if (state.format === "double") {
-    state.matches = makePairMatches(teamIds, 1, "Round 1", "double");
+    state.matches = buildDoubleElimBracket(teamIds);
   }
+
+  state.matches.forEach((match, index) => {
+    match.court = (index % state.courts) + 1;
+  });
 
   if (state.format === "roundRobin") {
     state.matches = makeRoundRobinMatches(teamIds, null, "Round robin");
@@ -276,52 +567,15 @@ function applyScore(matchId, side, value) {
   match[side === "a" ? "scoreA" : "scoreB"] = value;
   state.matches.forEach(completeMatch);
 
-  if (state.format === "single") advanceSingle();
-  if (state.format === "double") advanceDouble();
+  if (state.format === "single" || state.format === "double") {
+    refreshBracketProgression();
+  }
   if (state.format === "pool") {
     maybeStartPoolBracket();
-    advancePoolBracket();
+    refreshBracketProgression();
   }
 
   renderAll();
-}
-
-function roundComplete(round, type = null) {
-  const matches = state.matches.filter((match) => match.round === round && (!type || match.type === type));
-  return matches.length > 0 && matches.every((match) => match.winner || !match.b);
-}
-
-function advanceSingle() {
-  let currentRound = 1;
-  while (roundComplete(currentRound)) {
-    const nextExists = state.matches.some((match) => match.round === currentRound + 1);
-    const winners = state.matches
-      .filter((match) => match.round === currentRound)
-      .map((match) => match.winner || match.a)
-      .filter(Boolean);
-
-    if (winners.length <= 1 || nextExists) break;
-
-    state.matches.push(...makePairMatches(winners, currentRound + 1, `Round ${currentRound + 1}`));
-    currentRound += 1;
-  }
-}
-
-function advanceDouble() {
-  const active = new Set(state.teams.filter((team) => team.losses < 2).map((team) => team.id));
-  state.teams.forEach((team) => {
-    team.losses = state.matches.filter((match) => match.loser === team.id).length;
-    if (team.losses >= 2) active.delete(team.id);
-  });
-
-  const maxRound = Math.max(...state.matches.map((match) => match.round), 1);
-  if (!roundComplete(maxRound, "double")) return;
-
-  const remaining = [...active];
-  const nextRoundExists = state.matches.some((match) => match.round === maxRound + 1 && match.type === "double");
-  if (remaining.length <= 1 || nextRoundExists) return;
-
-  state.matches.push(...makePairMatches(shuffle(remaining), maxRound + 1, `Round ${maxRound + 1}`, "double"));
 }
 
 function maybeStartPoolBracket() {
@@ -332,27 +586,11 @@ function maybeStartPoolBracket() {
   const perPool = Math.max(1, Number.parseInt(els.poolAdvancers.value, 10) || 1);
   const advancers = state.pools.flatMap((pool) => standingsFor(pool.id).slice(0, perPool).map((row) => row.team.id));
   state.bracketStarted = true;
-  state.matches.push(...makePairMatches(advancers, 100, "Bracket"));
-}
-
-function advancePoolBracket() {
-  if (!state.bracketStarted) return;
-
-  let currentRound = Math.min(...state.matches.filter((match) => match.type === "bracket").map((match) => match.round));
-  if (!Number.isFinite(currentRound)) return;
-
-  while (roundComplete(currentRound, "bracket")) {
-    const nextExists = state.matches.some((match) => match.round === currentRound + 1 && match.type === "bracket");
-    const winners = state.matches
-      .filter((match) => match.round === currentRound && match.type === "bracket")
-      .map((match) => match.winner || match.a)
-      .filter(Boolean);
-
-    if (winners.length <= 1 || nextExists) break;
-
-    state.matches.push(...makePairMatches(winners, currentRound + 1, "Bracket"));
-    currentRound += 1;
-  }
+  const bracketMatches = buildSingleElimBracket(advancers);
+  bracketMatches.forEach((match) => {
+    match.round += 100;
+  });
+  state.matches.push(...bracketMatches);
 }
 
 function standingsFor(poolId = null) {
@@ -423,9 +661,126 @@ function renderTeams() {
   }
 }
 
-function renderBracket() {
-  els.bracketBoard.innerHTML = "";
-  if (!state.matches.length) return;
+function groupMatchesIntoRounds(matches) {
+  const rounds = new Map();
+  matches.forEach((match) => {
+    if (!rounds.has(match.round)) rounds.set(match.round, []);
+    rounds.get(match.round).push(match);
+  });
+  return [...rounds.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, roundMatches]) => roundMatches.sort((left, right) => left.matchNum - right.matchNum));
+}
+
+function slotDisplay(match, side) {
+  const teamId = match[side];
+  if (teamId) {
+    const team = getTeam(teamId);
+    return {
+      text: teamName(team),
+      sub: team ? team.players.join(" & ") : "",
+      placeholder: false,
+      teamId,
+      seed: match.side === "winners" && match.round === seedRoundFor(state.matches) ? bracketSeed(teamId) : null,
+    };
+  }
+  return feederLabel(match.id, side);
+}
+
+function renderTreeTeam(match, side) {
+  const slot = slotDisplay(match, side);
+  const team = slot.teamId ? getTeam(slot.teamId) : null;
+  const row = document.createElement("div");
+  const isWinner = match.winner && match[side] === match.winner;
+  row.className = `tree-team ${side === "a" ? "top" : "bottom"}${isWinner ? " winner" : ""}${slot.placeholder ? " placeholder" : ""}`;
+
+  if (slot.seed) {
+    const seed = document.createElement("span");
+    seed.className = "tree-seed";
+    seed.textContent = slot.seed;
+    row.append(seed);
+  }
+
+  const info = document.createElement("div");
+  info.className = "tree-team-info";
+  const label = document.createElement("span");
+  label.className = "tree-label";
+  label.textContent = slot.text;
+  info.append(label);
+  if (slot.sub) {
+    const sub = document.createElement("span");
+    sub.className = "tree-sub";
+    sub.textContent = slot.sub;
+    info.append(sub);
+  }
+  row.append(info);
+
+  const score = document.createElement("input");
+  score.className = "tree-score";
+  score.inputMode = "numeric";
+  score.value = side === "a" ? match.scoreA : match.scoreB;
+  score.disabled = !team;
+  score.setAttribute("aria-label", `${slot.text} score`);
+  score.addEventListener("input", (event) => applyScore(match.id, side, event.target.value));
+  row.append(score);
+
+  return row;
+}
+
+function renderTreeMatchup(match, isLastRound) {
+  const wrap = document.createElement("div");
+  wrap.className = `tree-matchup${isLastRound ? " final-round" : ""}`;
+  wrap.dataset.matchId = match.id;
+  wrap.append(renderTreeTeam(match, "a"));
+  wrap.append(renderTreeTeam(match, "b"));
+
+  const marker = document.createElement("span");
+  marker.className = "tree-match-num";
+  marker.textContent = match.matchNum;
+  wrap.append(marker);
+
+  return wrap;
+}
+
+function renderBracketTree(matches, { title = null, teamCount = null } = {}) {
+  const section = document.createElement("section");
+  section.className = "bracket-section";
+
+  if (title) {
+    const heading = document.createElement("h2");
+    heading.className = "bracket-section-title";
+    heading.textContent = title;
+    section.append(heading);
+  }
+
+  const tree = document.createElement("div");
+  const size = teamCount || nextPow2(state.teams.length);
+  tree.className = "bracket-tree";
+  tree.style.setProperty("--team-count", String(size));
+
+  const rounds = groupMatchesIntoRounds(matches);
+  rounds.forEach((roundMatches, index) => {
+    const roundEl = document.createElement("div");
+    roundEl.className = `tree-round tree-round-${index + 1}`;
+    roundEl.style.setProperty("--round-size", String(Math.max(roundMatches.length, 1)));
+    const isLast = index === rounds.length - 1;
+    roundMatches.forEach((match) => roundEl.append(renderTreeMatchup(match, isLast)));
+    tree.append(roundEl);
+  });
+
+  section.append(tree);
+  return section;
+}
+
+function renderFinalsColumn(matches) {
+  const column = document.createElement("div");
+  column.className = "bracket-finals";
+  matches.forEach((match) => column.append(renderTreeMatchup(match, true)));
+  return column;
+}
+
+function renderListBracket() {
+  els.bracketBoard.className = "bracket-board full-board";
 
   if (state.format === "pool") {
     const poolWrap = document.createElement("div");
@@ -441,22 +796,10 @@ function renderBracket() {
       column.append(title);
       state.matches
         .filter((match) => match.type === "pool" && match.pool === pool.id)
-        .forEach((match) => column.append(renderMatch(match)));
+        .forEach((match) => column.append(renderListMatch(match)));
       els.bracketBoard.append(column);
     });
   }
-
-  const bracketMatches = state.matches.filter((match) => match.type !== "pool" && match.type !== "roundRobin");
-  const rounds = [...new Set(bracketMatches.map((match) => match.round))].sort((a, b) => a - b);
-  rounds.forEach((round) => {
-    const column = document.createElement("div");
-    column.className = "round-column";
-    const title = document.createElement("h3");
-    title.textContent = round >= 100 ? "Final Bracket" : `Round ${round}`;
-    column.append(title);
-    bracketMatches.filter((match) => match.round === round).forEach((match) => column.append(renderMatch(match)));
-    els.bracketBoard.append(column);
-  });
 
   if (state.format === "roundRobin") {
     const column = document.createElement("div");
@@ -464,13 +807,13 @@ function renderBracket() {
     const title = document.createElement("h3");
     title.textContent = "Round Robin Matches";
     column.append(title);
-    state.matches.filter((match) => match.type === "roundRobin").forEach((match) => column.append(renderMatch(match)));
+    state.matches.filter((match) => match.type === "roundRobin").forEach((match) => column.append(renderListMatch(match)));
     els.bracketBoard.append(column);
     els.bracketBoard.append(renderStandingsTable("Round Robin Standings", standingsFor()));
   }
 }
 
-function renderMatch(match) {
+function renderListMatch(match) {
   const card = document.createElement("article");
   card.className = "match-card";
   const teamA = getTeam(match.a);
@@ -481,18 +824,12 @@ function renderMatch(match) {
       <span>Court ${match.court}</span>
     </div>
   `;
-  card.append(renderCompetitor(match, "a", teamA));
-  card.append(renderCompetitor(match, "b", teamB));
-  if (!teamB) {
-    const bye = document.createElement("span");
-    bye.className = "badge";
-    bye.textContent = "Bye";
-    card.append(bye);
-  }
+  card.append(renderListCompetitor(match, "a", teamA));
+  card.append(renderListCompetitor(match, "b", teamB));
   return card;
 }
 
-function renderCompetitor(match, side, team) {
+function renderListCompetitor(match, side, team) {
   const row = document.createElement("label");
   const isWinner = match.winner && match[side] === match.winner;
   row.className = `competitor ${isWinner ? "winner" : ""}`;
@@ -502,6 +839,66 @@ function renderCompetitor(match, side, team) {
   `;
   row.querySelector("input").addEventListener("input", (event) => applyScore(match.id, side, event.target.value));
   return row;
+}
+
+function fitBracketToScreen() {
+  const viewport = els.bracketBoard.querySelector(".bracket-viewport");
+  const scaler = viewport?.querySelector(".bracket-scaler");
+  if (!viewport || !scaler) return;
+
+  scaler.style.transform = "none";
+  const scale = Math.min(
+    1,
+    (viewport.clientWidth - 24) / scaler.scrollWidth,
+    (viewport.clientHeight - 24) / scaler.scrollHeight,
+  );
+  scaler.style.transform = `scale(${scale})`;
+}
+
+function renderBracket() {
+  els.bracketBoard.innerHTML = "";
+  if (!state.matches.length) {
+    els.bracketBoard.className = "bracket-board full-board";
+    return;
+  }
+
+  const usesTree = state.format === "single"
+    || state.format === "double"
+    || (state.format === "pool" && state.bracketStarted);
+
+  if (!usesTree) {
+    renderListBracket();
+    return;
+  }
+
+  els.bracketBoard.className = "bracket-board full-board bracket-tree-mode";
+  const viewport = document.createElement("div");
+  viewport.className = "bracket-viewport";
+  const scaler = document.createElement("div");
+  scaler.className = "bracket-scaler";
+
+  if (state.format === "double") {
+    const winners = state.matches.filter((match) => match.type === "bracket" && match.side === "winners");
+    const losers = state.matches.filter((match) => match.type === "bracket" && match.side === "losers");
+    const finals = state.matches.filter((match) => match.type === "bracket" && (match.side === "grand" || match.side === "reset"));
+
+    const topRow = document.createElement("div");
+    topRow.className = "bracket-row winners-row";
+    topRow.append(renderBracketTree(winners, { title: "Winners Bracket" }));
+    if (finals.length) topRow.append(renderFinalsColumn(finals));
+    scaler.append(topRow);
+    scaler.append(renderBracketTree(losers, { title: "Losers Bracket" }));
+  } else if (state.format === "pool" && state.bracketStarted) {
+    const bracketMatches = state.matches.filter((match) => match.type === "bracket" && match.round >= 100);
+    scaler.append(renderBracketTree(bracketMatches, { title: "Championship Bracket" }));
+  } else {
+    const bracketMatches = state.matches.filter((match) => match.type === "bracket");
+    scaler.append(renderBracketTree(bracketMatches));
+  }
+
+  viewport.append(scaler);
+  els.bracketBoard.append(viewport);
+  requestAnimationFrame(fitBracketToScreen);
 }
 
 function renderSchedule() {
@@ -598,6 +995,8 @@ els.tabs.forEach((tab) => {
     els.views.forEach((view) => view.classList.toggle("active", view.id === `${tab.dataset.view}View`));
   });
 });
+
+window.addEventListener("resize", fitBracketToScreen);
 
 showScreen("entry");
 updateFormatOptions();

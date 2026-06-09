@@ -75,6 +75,10 @@ button {
   padding: 12px;
 }
 
+.tournament-screen.active .view.active {
+  min-height: 0;
+}
+
 .flow-card {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--line);
@@ -501,10 +505,209 @@ input:focus {
   padding-bottom: 8px;
 }
 
+.bracket-board.bracket-tree-mode {
+  background: #121214;
+  overflow: hidden;
+  padding: 0;
+}
+
+#bracketView:has(.bracket-tree-mode) {
+  background: #121214;
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.bracket-viewport {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  width: 100%;
+}
+
+.bracket-scaler {
+  display: grid;
+  gap: 36px;
+  transform-origin: center center;
+}
+
+.bracket-row {
+  align-items: stretch;
+  display: flex;
+  gap: 28px;
+}
+
+.bracket-section {
+  display: grid;
+  gap: 10px;
+}
+
+.bracket-section-title {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.bracket-tree {
+  --slot-height: 30px;
+  --team-count: 8;
+  display: flex;
+  gap: 54px;
+  min-height: calc(var(--team-count) * var(--slot-height));
+}
+
+.tree-round {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: space-around;
+  min-height: calc(var(--team-count) * var(--slot-height));
+}
+
+.tree-matchup {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc((var(--team-count) * var(--slot-height)) / var(--round-size, 4));
+  padding: 4px 0;
+  position: relative;
+}
+
+.tree-round-1 { --round-size: 4; }
+.tree-round-2 { --round-size: 2; }
+.tree-round-3 { --round-size: 1; }
+.tree-round-4 { --round-size: 1; }
+
+.tree-team {
+  align-items: center;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr 42px;
+  min-height: var(--slot-height);
+  min-width: 220px;
+  padding: 2px 0 2px 2px;
+  position: relative;
+}
+
+.tree-team-info {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tree-team.placeholder .tree-label {
+  font-style: italic;
+  opacity: 0.72;
+}
+
+.tree-team.winner .tree-label {
+  font-weight: 800;
+}
+
+.tree-seed {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 16px;
+}
+
+.tree-label {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.tree-sub {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-score {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  color: #fff;
+  min-height: 24px;
+  text-align: center;
+  width: 42px;
+}
+
+.tree-score:focus {
+  border-color: #fff;
+  outline: none;
+}
+
+.tree-score:disabled {
+  opacity: 0.35;
+}
+
+.tree-matchup::before {
+  border-right: 1px solid #fff;
+  bottom: calc(var(--slot-height) / 2);
+  content: "";
+  position: absolute;
+  right: -27px;
+  top: calc(var(--slot-height) / 2);
+  width: 1px;
+}
+
+.tree-matchup::after {
+  background: #fff;
+  content: "";
+  height: 1px;
+  position: absolute;
+  right: -54px;
+  top: 50%;
+  width: 27px;
+}
+
+.tree-matchup.final-round::after {
+  display: none;
+}
+
+.tree-match-num {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  font-weight: 700;
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.bracket-finals {
+  align-self: center;
+  display: grid;
+  gap: 28px;
+}
+
+.bracket-finals .tree-matchup {
+  min-height: calc(var(--team-count) * var(--slot-height) / 2);
+}
+
+.bracket-finals .tree-matchup[data-match-id] .tree-team {
+  min-width: 200px;
+}
+
 .full-board {
   height: 100%;
   min-height: 0;
   padding: 14px 2px 16px;
+}
+
+.full-board.bracket-tree-mode {
+  padding: 0;
 }
 
 .full-board .round-column {
@@ -723,6 +926,15 @@ th {
 @media print {
   body {
     background: #fff;
+  }
+
+  .bracket-board.bracket-tree-mode,
+  #bracketView:has(.bracket-tree-mode) {
+    background: #121214;
+  }
+
+  .bracket-scaler {
+    transform: none !important;
   }
 
   .topbar,
