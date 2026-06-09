@@ -8,19 +8,19 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a0a;color:#c9a84c;font-family:'Crimson Text',serif;min-height:100vh}
-.page{max-width:1400px;margin:0 auto;padding:20px}
+.page{max-width:1500px;margin:0 auto;padding:20px}
 header{text-align:center;padding:24px 0 16px;border-bottom:1px solid #2a1f05}
 .title-main{font-family:'Cinzel',serif;font-size:38px;font-weight:700;color:#c9a84c;letter-spacing:4px}
 .title-sub{font-family:'Cinzel',serif;font-size:11px;letter-spacing:6px;color:#5a4020;margin-top:4px}
 .divider{width:180px;height:1px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);margin:10px auto}
-.tabs{display:flex;gap:0;margin:20px 0 0;border-bottom:1px solid #2a1f05}
+.tabs{display:flex;border-bottom:1px solid #2a1f05;margin:20px 0 0}
 .tab{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;padding:9px 22px;cursor:pointer;border:1px solid transparent;border-bottom:none;color:#5a4020;transition:all .2s}
 .tab.active{color:#c9a84c;border-color:#2a1f05;border-bottom-color:#0a0a0a;background:#0d0b04}
 .tab:hover:not(.active){color:#a8883c}
 .panel{display:none;padding:20px 0}.panel.active{display:block}
 .sec{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:#5a4020;margin-bottom:14px}
 .row{display:flex;gap:8px;margin-bottom:14px}
-input[type=text]{background:#0d0b04;border:1px solid #2a1f05;color:#c9a84c;font-family:'Crimson Text',serif;font-size:16px;padding:7px 11px;flex:1;outline:none;transition:border .2s}
+input[type=text]{background:#0d0b04;border:1px solid #2a1f05;color:#c9a84c;font-family:'Crimson Text',serif;font-size:16px;padding:7px 11px;flex:1;outline:none}
 input[type=text]:focus{border-color:#7a6030}
 input[type=text]::placeholder{color:#2a1f05}
 .btn{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;padding:7px 18px;cursor:pointer;border:1px solid #c9a84c;background:transparent;color:#c9a84c;transition:all .2s;white-space:nowrap}
@@ -29,21 +29,19 @@ input[type=text]::placeholder{color:#2a1f05}
 .btn.rb{border-color:#4a1a1a;color:#7a3030}.btn.rb:hover{background:#4a1a1a;color:#c9a84c}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px}
 .tag{display:flex;align-items:center;gap:5px;background:#0d0b04;border:1px solid #2a1f05;padding:3px 9px;font-size:14px;color:#a8883c}
-.tag button{background:none;border:none;color:#3a2a0a;cursor:pointer;font-size:15px;line-height:1;padding:0}.tag button:hover{color:#c9a84c}
-.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:14px}
-.team-card{background:#0d0b04;border:1px solid #2a1f05;padding:9px 12px}
-.tc-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#5a4020;margin-bottom:4px}
-.tc-names{font-size:14px;color:#c9a84c}
+.tag button{background:none;border:none;color:#3a2a0a;cursor:pointer;font-size:15px;line-height:1}
+.tag button:hover{color:#c9a84c}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:14px}
+.tc{background:#0d0b04;border:1px solid #2a1f05;padding:9px 12px}
+.tc-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#5a4020;margin-bottom:4px}
+.tc-nm{font-size:14px;color:#c9a84c}
 .fmt-opts{display:flex;gap:10px;margin-bottom:18px}
 .fmt-btn{flex:1;padding:12px;border:1px solid #2a1f05;background:#0d0b04;color:#5a4020;cursor:pointer;text-align:center;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;transition:all .2s}
 .fmt-btn.sel{border-color:#c9a84c;color:#c9a84c;background:#140f00}
 .fmt-btn:hover:not(.sel){border-color:#3a2a0a;color:#a8883c}
 .err{font-size:14px;color:#7a3030;font-style:italic}
-#champ-banner{display:none;text-align:center;padding:24px;border:1px solid #c9a84c;margin-bottom:20px;background:#0d0b04}
-#champ-banner.show{display:block}
-.cb-lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:#5a4020}
-.cb-name{font-family:'Cinzel',serif;font-size:28px;color:#c9a84c;margin:6px 0}
-.cb-sub{font-size:14px;color:#5a4020;font-style:italic}
+#champ{display:none;text-align:center;padding:24px;border:1px solid #c9a84c;margin-bottom:20px;background:#0d0b04}
+#champ.show{display:block}
 .bwrap{overflow:auto;padding:10px 0}
 </style>
 </head>
@@ -68,14 +66,15 @@ input[type=text]::placeholder{color:#2a1f05}
   </div>
   <div class="tags" id="ptags"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-    <button class="btn sb" onclick="loadSample(4)">4 Sample Teams</button>
-    <button class="btn sb" onclick="loadSample(8)">8 Sample Teams</button>
+    <button class="btn sb" onclick="loadSample(4)">4 Teams</button>
+    <button class="btn sb" onclick="loadSample(5)">5 Teams</button>
+    <button class="btn sb" onclick="loadSample(8)">8 Teams</button>
     <button class="btn rb" onclick="clearP()">Clear All</button>
   </div>
   <div class="sec">Format</div>
   <div class="fmt-opts">
-    <div class="fmt-btn sel" id="fmt-single" onclick="setFmt('single')">Single<br>Elimination</div>
-    <div class="fmt-btn" id="fmt-double" onclick="setFmt('double')">Double<br>Elimination</div>
+    <div class="fmt-btn sel" id="fmt-se" onclick="setFmt('se')">Single<br>Elimination</div>
+    <div class="fmt-btn" id="fmt-de" onclick="setFmt('de')">Double<br>Elimination</div>
   </div>
   <div style="display:flex;gap:10px;align-items:center">
     <button class="btn" onclick="goTeams()">Continue to Teams →</button>
@@ -85,47 +84,45 @@ input[type=text]::placeholder{color:#2a1f05}
 
 <div id="panel-teams" class="panel">
   <div class="sec">Teams</div>
-  <div class="teams-grid" id="tgrid"></div>
+  <div class="tgrid" id="tgrid"></div>
   <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
-    <button class="btn sb" onclick="shuffleTeams()">↺ Re-randomize</button>
-    <button class="btn" onclick="genBracket()">Generate Bracket →</button>
+    <button class="btn sb" onclick="doShuffle()">↺ Re-randomize</button>
+    <button class="btn" onclick="gen()">Generate Bracket →</button>
     <span class="err" id="tmsg"></span>
   </div>
 </div>
 
 <div id="panel-bracket" class="panel">
-  <div id="champ-banner">
-    <div class="cb-lbl">Champion</div>
-    <div class="cb-name" id="cname"></div>
-    <div class="cb-sub">An offer they couldn't refuse.</div>
+  <div id="champ">
+    <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:4px;color:#5a4020">Champion</div>
+    <div id="cname" style="font-family:Cinzel,serif;font-size:28px;color:#c9a84c;margin:6px 0"></div>
+    <div style="font-size:14px;color:#5a4020;font-style:italic">An offer they couldn't refuse.</div>
   </div>
   <div id="bcont"></div>
 </div>
 </div>
 
 <script>
-// ─── globals ────────────────────────────────────────────────────────────────
-let players=[], teams=[], fmt='single';
-// Match store: id -> {id, t1, t2, winner, loser, s1, s2}
-let M={}, mSeq=0;
+// ── globals ─────────────────────────────────────────────────────────────────
+let players=[], teams=[], fmt='se';
+let ALL_M={}, mId=0;
 
-function newMatch(t1,t2){
-  const id=++mSeq;
-  M[id]={id,t1:t1||null,t2:t2||null,winner:null,loser:null,s1:'',s2:''};
-  if(M[id].t1&&!M[id].t2){M[id].winner=M[id].t1;}
-  if(M[id].t2&&!M[id].t1){M[id].winner=M[id].t2;}
-  return M[id];
+function mkM(t1,t2){
+  const m={id:++mId, t1:t1||null, t2:t2||null, winner:null, loser:null, lbl1:'', lbl2:''};
+  if(m.t1&&!m.t2){m.winner=m.t1;}
+  if(m.t2&&!m.t1){m.winner=m.t2;}
+  if(m.winner) m.loser=(m.winner===m.t1)?m.t2:m.t1;
+  ALL_M[m.id]=m;
+  return m;
 }
 
-// ─── tabs ────────────────────────────────────────────────────────────────────
+// ── tabs / setup ─────────────────────────────────────────────────────────────
 function showTab(t){
   ['setup','teams','bracket'].forEach((p,i)=>{
     document.getElementById('panel-'+p).classList.toggle('active',p===t);
     document.querySelectorAll('.tab')[i].classList.toggle('active',p===t);
   });
 }
-
-// ─── players ─────────────────────────────────────────────────────────────────
 function addP(){
   const el=document.getElementById('pinp'),n=el.value.trim();
   if(!n||players.includes(n))return;
@@ -138,513 +135,444 @@ function renderP(){
 }
 function clearP(){players=[];renderP();}
 function loadSample(n){
-  const names=['Vito','Michael','Sonny','Fredo','Tom','Carlo','Luca','Peter','Sal','Neri','Clemenza','Barzini','Tattaglia','Virgil','Calo','Enzo'];
-  players=names.slice(0,n*2);renderP();
+  const nm=['Vito','Michael','Sonny','Fredo','Tom','Carlo','Luca','Peter',
+            'Sal','Neri','Clemenza','Barzini','Virgil','Calo','Enzo','Tattaglia'];
+  players=nm.slice(0,n*2); renderP();
 }
 function setFmt(f){
   fmt=f;
-  ['single','double'].forEach(x=>document.getElementById('fmt-'+x).classList.toggle('sel',x===f));
+  ['se','de'].forEach(x=>document.getElementById('fmt-'+x).classList.toggle('sel',x===f));
 }
 function goTeams(){
   const msg=document.getElementById('smsg');
-  if(players.length<4){msg.textContent='Need at least 4 players (2 teams).';return;}
-  if(players.length%2!==0){msg.textContent='Need an even number of players.';return;}
-  msg.textContent='';shuffleTeams();showTab('teams');
+  if(players.length<4){msg.textContent='Need at least 4 players.';return;}
+  if(players.length%2!==0){msg.textContent='Need even number of players.';return;}
+  msg.textContent='';
+  doShuffle();showTab('teams');
 }
-function shuffleTeams(){
+function doShuffle(){
   const s=[...players].sort(()=>Math.random()-.5);
   teams=[];
   for(let i=0;i<s.length;i+=2) teams.push({p1:s[i],p2:s[i+1]});
-  renderTeams();
-}
-function renderTeams(){
   document.getElementById('tgrid').innerHTML=teams.map((t,i)=>
-    `<div class="team-card"><div class="tc-label">Team ${i+1}</div><div class="tc-names">${t.p1} &amp; ${t.p2}</div></div>`
+    `<div class="tc"><div class="tc-lbl">Team ${i+1}</div><div class="tc-nm">${t.p1} &amp; ${t.p2}</div></div>`
   ).join('');
 }
-function genBracket(){
-  M={};mSeq=0;
-  if(fmt==='double') buildDE();
-  else buildSE();
+function gen(){
+  ALL_M={};mId=0;
+  fmt==='de'?buildDE():buildSE();
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-function tLabel(t){return t?`${t.p1} & ${t.p2}`:null;}
+// ── render helpers ────────────────────────────────────────────────────────────
+function lbl(t){return t?`${t.p1} & ${t.p2}`:null;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function tr(s,n){return s&&s.length>n?s.slice(0,n-1)+'…':s;}
+function trunc(s,n){return s&&s.length>n?s.slice(0,n-2)+'…':s;}
 function seedOf(t){return t?teams.indexOf(t)+1:null;}
 function setChamp(t){
-  if(t){document.getElementById('cname').textContent=tLabel(t);document.getElementById('champ-banner').classList.add('show');}
-  else document.getElementById('champ-banner').classList.remove('show');
+  if(t){document.getElementById('cname').textContent=lbl(t);document.getElementById('champ').classList.add('show');}
+  else document.getElementById('champ').classList.remove('show');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVG PRIMITIVES
-// ═══════════════════════════════════════════════════════════════════════════════
-const BG='#0d0b04', BG_WIN='#1a1200', STR='#2a1f05', STR_WIN='#c9a84c';
-const C_WIN='#c9a84c', C_TEAM='#a8883c', C_EMPTY='#2a1f05', C_SEED='#5a4020', C_NUM='#3a2a0a';
+// ── SVG drawing ───────────────────────────────────────────────────────────────
+const MW=178, MH=58, HGAP=50;
 
-// Draw a match box at (x,y) with width w, height h (total for both slots)
-// Returns SVG string
-function matchBox(m, x, y, w, h, clickFn){
-  const slotH=h/2;
-  const t1=tLabel(m.t1), t2=tLabel(m.t2);
+function drawMatch(m, x, y, fn){
+  const h2=MH/2;
   const w1=m.winner&&m.winner===m.t1, w2=m.winner&&m.winner===m.t2;
-  const hasBoth=m.t1&&m.t2;
+  const both=!!(m.t1&&m.t2);
   const s1=seedOf(m.t1), s2=seedOf(m.t2);
   let o='';
-  // Match number above top-left
-  o+=`<text x="${x+2}" y="${y-3}" fill="${C_NUM}" font-family="Cinzel,serif" font-size="9">${m.id}</text>`;
-  // Top slot
-  o+=`<g style="cursor:${hasBoth?'pointer':'default'}" onclick="${hasBoth?`${clickFn}(${m.id},1)`:''}">`;
-  o+=`<rect x="${x}" y="${y}" width="${w}" height="${slotH}" fill="${w1?BG_WIN:BG}" stroke="${w1?STR_WIN:STR}" stroke-width="${w1?1.5:1}"/>`;
-  if(s1) o+=`<text x="${x+5}" y="${y+slotH/2}" dominant-baseline="middle" fill="${C_SEED}" font-family="Cinzel,serif" font-size="10" font-weight="600">${s1}</text>`;
-  const d1=t1?esc(tr(t1,22)):`<tspan font-style="italic" fill="${C_EMPTY}">${m.lbl1||'—'}</tspan>`;
-  o+=`<text x="${x+(s1?18:8)}" y="${y+slotH/2}" dominant-baseline="middle" fill="${w1?C_WIN:hasBoth?C_TEAM:C_EMPTY}" font-size="13">${d1}</text>`;
+  // match number
+  o+=`<text x="${x+1}" y="${y-3}" fill="#2d2000" font-family="Cinzel,serif" font-size="9">${m.id}</text>`;
+  // top slot
+  o+=`<g style="cursor:${both?'pointer':'default'}" onclick="${both?fn+'('+m.id+',1)':''}">`;
+  o+=`<rect x="${x}" y="${y}" width="${MW}" height="${h2}" fill="${w1?'#1e1600':'#0d0b04'}" stroke="${w1?'#c9a84c':'#2a1f05'}" stroke-width="${w1?1.5:1}"/>`;
+  if(s1!=null) o+=`<text x="${x+5}" y="${y+h2/2}" dominant-baseline="middle" fill="#5a4020" font-family="Cinzel,serif" font-size="10">${s1}</text>`;
+  const tx1=lbl(m.t1)?esc(trunc(lbl(m.t1),22)):`<tspan font-style="italic" fill="#2a1f05">${esc(m.lbl1||'—')}</tspan>`;
+  o+=`<text x="${x+(s1!=null?17:7)}" y="${y+h2/2}" dominant-baseline="middle" fill="${w1?'#c9a84c':both?'#a8883c':'#2a1f05'}" font-size="13">${tx1}</text>`;
   o+='</g>';
-  // Divider
-  o+=`<line x1="${x}" y1="${y+slotH}" x2="${x+w}" y2="${y+slotH}" stroke="#1a1200" stroke-width="1"/>`;
-  // Bottom slot
-  o+=`<g style="cursor:${hasBoth?'pointer':'default'}" onclick="${hasBoth?`${clickFn}(${m.id},2)`:''}">`;
-  o+=`<rect x="${x}" y="${y+slotH}" width="${w}" height="${slotH}" fill="${w2?BG_WIN:BG}" stroke="${w2?STR_WIN:STR}" stroke-width="${w2?1.5:1}"/>`;
-  if(s2) o+=`<text x="${x+5}" y="${y+slotH*1.5}" dominant-baseline="middle" fill="${C_SEED}" font-family="Cinzel,serif" font-size="10" font-weight="600">${s2}</text>`;
-  const d2=t2?esc(tr(t2,22)):`<tspan font-style="italic" fill="${C_EMPTY}">${m.lbl2||'—'}</tspan>`;
-  o+=`<text x="${x+(s2?18:8)}" y="${y+slotH*1.5}" dominant-baseline="middle" fill="${w2?C_WIN:hasBoth?C_TEAM:C_EMPTY}" font-size="13">${d2}</text>`;
+  // divider
+  o+=`<line x1="${x}" y1="${y+h2}" x2="${x+MW}" y2="${y+h2}" stroke="#1a1200" stroke-width="1"/>`;
+  // bottom slot
+  o+=`<g style="cursor:${both?'pointer':'default'}" onclick="${both?fn+'('+m.id+',2)':''}">`;
+  o+=`<rect x="${x}" y="${y+h2}" width="${MW}" height="${h2}" fill="${w2?'#1e1600':'#0d0b04'}" stroke="${w2?'#c9a84c':'#2a1f05'}" stroke-width="${w2?1.5:1}"/>`;
+  if(s2!=null) o+=`<text x="${x+5}" y="${y+h2*1.5}" dominant-baseline="middle" fill="#5a4020" font-family="Cinzel,serif" font-size="10">${s2}</text>`;
+  const tx2=lbl(m.t2)?esc(trunc(lbl(m.t2),22)):`<tspan font-style="italic" fill="#2a1f05">${esc(m.lbl2||'—')}</tspan>`;
+  o+=`<text x="${x+(s2!=null?17:7)}" y="${y+h2*1.5}" dominant-baseline="middle" fill="${w2?'#c9a84c':both?'#a8883c':'#2a1f05'}" font-size="13">${tx2}</text>`;
   o+='</g>';
   return o;
 }
 
-// L-shaped connector: exit right side of (x1,y1), arrive left side of (x2,y2)
-function conn(x1,y1,x2,y2,color){
-  color=color||STR;
-  const mid=(x1+x2)/2;
-  return `<polyline points="${x1},${y1} ${mid},${y1} ${mid},${y2} ${x2},${y2}" fill="none" stroke="${color}" stroke-width="1.5"/>`;
+// L-shaped connector: from right-center of match at (rx,cy) to left of target at (tx,ty)
+function conn(rx,cy,tx,ty){
+  const midX=rx+HGAP/2;
+  return `<polyline points="${rx},${cy} ${midX},${cy} ${midX},${ty} ${tx},${ty}" fill="none" stroke="#2a1f05" stroke-width="1.5"/>`;
 }
-// Simple horizontal line
-function hline(x1,x2,y,color){
-  return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color||STR}" stroke-width="1.5"/>`;
-}
-// Section label
-function secLabel(text,x,y){
-  return `<text x="${x}" y="${y}" fill="#5a4020" font-family="Cinzel,serif" font-size="10" letter-spacing="3">${text}</text>`;
-}
-// Round label centered above column
-function rdLabel(text,x,w,y){
-  return `<text x="${x+w/2}" y="${y}" text-anchor="middle" fill="#2a1f05" font-family="Cinzel,serif" font-size="9" letter-spacing="2">${text}</text>`;
-}
+function hline(x1,x2,y,c){return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${c||'#2a1f05'}" stroke-width="1.5"/>`;}
+function sLabel(t,x,y){return `<text x="${x}" y="${y}" fill="#5a4020" font-family="Cinzel,serif" font-size="10" letter-spacing="3">${t}</text>`;}
+function rLabel(t,x,y){return `<text x="${x}" y="${y}" text-anchor="middle" fill="#2a1f05" font-family="Cinzel,serif" font-size="9" letter-spacing="2">${t}</text>`;}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SINGLE ELIMINATION
 // ═══════════════════════════════════════════════════════════════════════════════
-function buildSE(){
-  const n=teams.length;
-  const nRounds=Math.ceil(Math.log2(n));
-  const size=Math.pow(2,nRounds);
-  // Seed with byes
-  const seeded=[...teams]; while(seeded.length<size) seeded.push(null);
+let SE={};
 
-  // Build round 0
-  const rounds=[[]];
+function buildSE(){
+  SE={rounds:[]};
+  const nR=Math.ceil(Math.log2(teams.length));
+  const size=Math.pow(2,nR);
+  // Randomly assign byes: shuffle then pad with nulls
+  const seeded=[...teams].sort(()=>Math.random()-.5);
+  while(seeded.length<size) seeded.splice(Math.floor(Math.random()*(seeded.length+1)),0,null);
+
+  // R0
+  const r0=[];
   for(let i=0;i<size;i+=2){
-    const m=newMatch(seeded[i],seeded[i+1]);
-    rounds[0].push(m);
+    const m=mkM(seeded[i],seeded[i+1]);
+    r0.push(m);
   }
-  // Build subsequent rounds
-  for(let r=1;r<nRounds;r++){
-    const prev=rounds[r-1],cur=[];
+  SE.rounds.push(r0);
+
+  for(let r=1;r<nR;r++){
+    const prev=SE.rounds[r-1],cur=[];
     for(let i=0;i<prev.length;i+=2){
-      const m=newMatch(null,null);
-      m.src=[prev[i].id, prev[i+1]?prev[i+1].id:null];
+      const m=mkM(null,null);
+      m.srcIds=[prev[i].id, prev[i+1]?prev[i+1].id:null];
       m.lbl1=`Winner of ${prev[i].id}`;
       m.lbl2=prev[i+1]?`Winner of ${prev[i+1].id}`:'—';
       cur.push(m);
     }
-    rounds.push(cur);
+    SE.rounds.push(cur);
   }
-  propagateSE(rounds);
-  showTab('bracket');
-  renderSE(rounds);
+  propagateSE();showTab('bracket');renderSE();
 }
 
-function propagateSE(rounds){
-  for(let r=1;r<rounds.length;r++){
-    rounds[r].forEach((m,mi)=>{
-      const [id1,id2]=m.src||[];
-      const s1=id1?M[id1]:null, s2=id2?M[id2]:null;
-      m.t1=s1?s1.winner:null;
-      m.t2=s2?s2.winner:null;
-      if(m.winner&&m.winner!==m.t1&&m.winner!==m.t2) m.winner=null;
-      if(m.t1&&!m.t2) m.winner=m.t1;
-      if(m.t2&&!m.t1) m.winner=m.t2;
-    });
-  }
+function propagateSE(){
+  SE.rounds.slice(1).forEach(rd=>rd.forEach(m=>{
+    const [id1,id2]=m.srcIds||[];
+    const s1=ALL_M[id1],s2=id2?ALL_M[id2]:null;
+    const nt1=s1?s1.winner:null,nt2=s2?s2.winner:null;
+    if(m.winner&&(m.winner!==nt1&&m.winner!==nt2))m.winner=null;
+    m.t1=nt1;m.t2=nt2;
+    if(m.t1&&!m.t2)m.winner=m.t1;
+    if(m.t2&&!m.t1)m.winner=m.t2;
+  }));
+  SE.champ=SE.rounds[SE.rounds.length-1][0].winner;
 }
 
 function clickSE(id,side){
-  const m=M[id];
-  if(!m||!m.t1||!m.t2) return;
+  const m=ALL_M[id];if(!m||!m.t1||!m.t2)return;
   m.winner=side===1?m.t1:m.t2;
-  // find which rounds array — re-derive from stored structure
-  propagateSE(window._seRounds);
-  renderSE(window._seRounds);
+  m.loser=side===1?m.t2:m.t1;
+  propagateSE();renderSE();
 }
 
-function renderSE(rounds){
-  window._seRounds=rounds;
-  const MW=180,MH=64,HGAP=70,TOP=50,LEFT=30;
-  const nRounds=rounds.length;
-  const nSlots=rounds[0].length;
+function renderSE(){
+  const rds=SE.rounds,nR=rds.length;
+  const TOP=52,LEFT=30;
+  const nSlots=rds[0].length;
   const slotH=MH+32;
-  const svgH=TOP+nSlots*slotH+40;
-  const svgW=LEFT+nRounds*(MW+HGAP)+120;
+  const svgW=LEFT+nR*(MW+HGAP)+140;
+  const svgH=TOP+nSlots*slotH+30;
+  const rdNames=getRdNames(nR);
   let o='';
-
-  // Round labels
-  const rdNames=getRoundNames(nRounds);
-  rounds.forEach((rd,ri)=>{
+  rds.forEach((rd,ri)=>{
     const x=LEFT+ri*(MW+HGAP);
-    o+=rdLabel(rdNames[ri],x,MW,TOP-18);
-  });
-
-  rounds.forEach((rd,ri)=>{
-    const x=LEFT+ri*(MW+HGAP);
+    o+=rLabel(rdNames[ri],x+MW/2,TOP-10);
     const span=Math.pow(2,ri);
     rd.forEach((m,mi)=>{
       const cy=TOP+(mi*span*2+span)*slotH;
       const y=cy-MH/2;
-      o+=matchBox(m,x,y,MW,MH,'clickSE');
-      if(ri<nRounds-1){
-        const nspan=Math.pow(2,ri+1);
-        const ncy=TOP+(Math.floor(mi/2)*nspan*2+nspan)*slotH;
+      o+=drawMatch(m,x,y,'clickSE');
+      if(ri<nR-1){
+        const ns=Math.pow(2,ri+1);
+        const ncy=TOP+(Math.floor(mi/2)*ns*2+ns)*slotH;
         o+=conn(x+MW,cy,x+MW+HGAP,ncy);
       }
     });
   });
-
-  // Champion
-  const fin=rounds[nRounds-1][0];
-  const finSpan=Math.pow(2,nRounds-1);
-  const finCy=TOP+(finSpan)*slotH;
-  const finX=LEFT+(nRounds-1)*(MW+HGAP)+MW;
-  if(fin.winner){
-    o+=hline(finX,finX+30,finCy,C_WIN);
-    o+=`<text x="${finX+36}" y="${finCy}" dominant-baseline="middle" fill="${C_WIN}" font-family="Cinzel,serif" font-size="11" letter-spacing="2">CHAMPION</text>`;
+  const fin=rds[nR-1][0];
+  const finSpan=Math.pow(2,nR-1);
+  const finCy=TOP+finSpan*slotH;
+  const finX=LEFT+(nR-1)*(MW+HGAP)+MW;
+  if(SE.champ){
+    o+=hline(finX,finX+28,finCy,'#c9a84c');
+    o+=`<text x="${finX+34}" y="${finCy}" dominant-baseline="middle" fill="#c9a84c" font-family="Cinzel,serif" font-size="11" letter-spacing="2">CHAMPION</text>`;
   }
-
   document.getElementById('bcont').innerHTML=
     `<div class="bwrap"><svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">${o}</svg></div>`;
-  setChamp(fin.winner);
+  setChamp(SE.champ||null);
 }
 
-function getRoundNames(n){
-  const names=[];
-  for(let i=0;i<n;i++){
-    const rem=n-i;
-    if(rem===1) names.push('FINAL');
-    else if(rem===2) names.push('SEMIFINAL');
-    else if(rem===3) names.push('QUARTERFINAL');
-    else names.push(`ROUND ${i+1}`);
-  }
-  return names;
+function getRdNames(n){
+  return Array.from({length:n},(_,i)=>{
+    const r=n-i;
+    return r===1?'FINAL':r===2?'SEMIFINAL':r===3?'QUARTERFINAL':`ROUND ${i+1}`;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DOUBLE ELIMINATION
 // ═══════════════════════════════════════════════════════════════════════════════
-// Structure mirrors the screenshot exactly:
-// WB: standard single-elim bracket, seeded
-// LB: interleaved drop-in + consolidation rounds
-// Grand Final: WB winner vs LB winner, with "if necessary" game 2
-//
-// For N teams (power of 2):
-//   WB has log2(N) rounds
-//   LB has 2*(log2(N)-1) rounds
-//   GF has 1 match (+ optional game 2)
-//
-// LB seeding (matching screenshot for 4 teams / 8 teams):
-//   LB R1 (drop-in): losers from WB R1, paired cross-bracket
-//   LB R2 (consolidation): LB R1 winners vs each other
-//   LB R3 (drop-in): LB R2 winner vs WB R2 loser
-//   ... etc
-
-let _de={};
+let DE={};
 
 function buildDE(){
-  _de={};
-  const n=teams.length;
-  const nWBR=Math.ceil(Math.log2(n));
-  const size=Math.pow(2,nWBR);
-  const seeded=[...teams]; while(seeded.length<size) seeded.push(null);
+  DE={};
+  const nR=Math.ceil(Math.log2(teams.length));
+  const size=Math.pow(2,nR);
 
-  // ── WB ──────────────────────────────────────────────────────────
-  _de.wbRounds=[];
-  // WB R1
+  // Randomly distribute byes
+  const seeded=[...teams].sort(()=>Math.random()-.5);
+  while(seeded.length<size) seeded.splice(Math.floor(Math.random()*(seeded.length+1)),0,null);
+
+  // ── Build WB ────────────────────────────────────────────────────
+  const wbR=[];
   const wbR0=[];
-  for(let i=0;i<size;i+=2){
-    const m=newMatch(seeded[i],seeded[i+1]);
-    wbR0.push(m);
-  }
-  _de.wbRounds.push(wbR0);
-  for(let r=1;r<nWBR;r++){
-    const prev=_de.wbRounds[r-1],cur=[];
+  for(let i=0;i<size;i+=2) wbR0.push(mkM(seeded[i],seeded[i+1]));
+  wbR.push(wbR0);
+  for(let r=1;r<nR;r++){
+    const prev=wbR[r-1],cur=[];
     for(let i=0;i<prev.length;i+=2){
-      const m=newMatch(null,null);
-      m.src=[prev[i].id,prev[i+1]?prev[i+1].id:null];
+      const m=mkM(null,null);
+      m.srcIds=[prev[i].id,prev[i+1]?prev[i+1].id:null];
       m.lbl1=`Winner of ${prev[i].id}`;
       m.lbl2=prev[i+1]?`Winner of ${prev[i+1].id}`:'—';
       cur.push(m);
     }
-    _de.wbRounds.push(cur);
+    wbR.push(cur);
   }
 
-  // ── LB ──────────────────────────────────────────────────────────
-  // LB has 2*(nWBR-1) rounds total
-  // Odd rounds (0-indexed even): drop-in from WB
-  // Even rounds (0-indexed odd): consolidation
-  _de.lbRounds=[];
-  const nLBR=2*(nWBR-1);
-
+  // ── Build LB ────────────────────────────────────────────────────
+  // 2*(nR-1) LB rounds total.
+  // LB round 0      : drop-in (WB R1 losers, cross-seeded)
+  // LB round 1      : consolidation (LB R0 winners vs each other)
+  // LB round 2      : drop-in (WB R2 losers vs LB R1 winners)
+  // LB round 3      : consolidation
+  // ...
+  const lbR=[];
+  const nLBR=2*(nR-1);
   for(let r=0;r<nLBR;r++){
-    // Number of matches in this LB round
-    // LB R1: size/4 matches (pairs of WB R1 losers)
-    // LB R2: size/4 matches (consolidation)
-    // LB R3: size/8 matches (drop-in from WB R2)
-    // LB R4: size/8 (consolidation)
-    // etc.
-    const cnt=Math.max(1, size / Math.pow(2, Math.floor(r/2)+2));
-    const rd=[];
-    for(let i=0;i<cnt;i++){
-      const m=newMatch(null,null);
-      m.lbRound=r;
-      rd.push(m);
-    }
-    _de.lbRounds.push(rd);
+    const cnt=Math.max(1, size/Math.pow(2, Math.floor(r/2)+2));
+    const cur=[];
+    for(let i=0;i<cnt;i++) cur.push(mkM(null,null));
+    lbR.push(cur);
   }
 
   // GF
-  _de.gf=newMatch(null,null);
-  _de.gf.lbl1='Winner of WB';
-  _de.gf.lbl2='Winner of LB';
-  _de.gf2=newMatch(null,null); // if necessary
-  _de.gf2.lbl1='Winner of GF1';
-  _de.gf2.lbl2='Loser of GF1';
-  _de.nWBR=nWBR;
+  const gf1=mkM(null,null);
+  const gf2=mkM(null,null);
 
+  DE={wbR,lbR,gf1,gf2,nR,size,champ:null};
   propagateDE();
   showTab('bracket');
   renderDE();
 }
 
-function propagateDE(){
-  const{wbRounds,lbRounds,gf,gf2,nWBR}=_de;
-  const size=Math.pow(2,nWBR);
+function setM(m,t1,t2){
+  // Update teams; reset winner if it's no longer valid
+  if(m.t1===t1&&m.t2===t2) return;
+  m.t1=t1||null; m.t2=t2||null;
+  if(m.winner&&(m.winner!==m.t1&&m.winner!==m.t2)) m.winner=null;
+  if(m.t1&&!m.t2){m.winner=m.t1;}
+  if(m.t2&&!m.t1){m.winner=m.t2;}
+  if(m.winner) m.loser=(m.winner===m.t1)?m.t2:m.t1; else m.loser=null;
+}
 
-  // Propagate WB
-  for(let r=1;r<wbRounds.length;r++){
-    wbRounds[r].forEach((m)=>{
-      const [id1,id2]=m.src||[];
-      const s1=id1?M[id1]:null,s2=id2?M[id2]:null;
-      const nt1=s1?s1.winner:null,nt2=s2?s2.winner:null;
-      if(m.winner&&(m.winner!==nt1&&m.winner!==nt2)) m.winner=null;
-      m.t1=nt1;m.t2=nt2;
-      if(m.t1&&!m.t2)m.winner=m.t1;
-      if(m.t2&&!m.t1)m.winner=m.t2;
-      if(m.winner)m.loser=m.winner===m.t1?m.t2:m.t1;
+function propagateDE(){
+  const{wbR,lbR,gf1,gf2,nR,size}=DE;
+
+  // WB
+  for(let r=1;r<wbR.length;r++){
+    wbR[r].forEach(m=>{
+      const [id1,id2]=m.srcIds||[];
+      setM(m, id1?ALL_M[id1].winner:null, id2?ALL_M[id2].winner:null);
     });
   }
+  // Recompute WB losers (after propagation)
+  wbR.forEach(rd=>rd.forEach(m=>{
+    if(m.winner) m.loser=(m.winner===m.t1)?m.t2:m.t1;
+  }));
 
-  // Feed WB losers into LB
-  // WB R1 losers → LB R1: pair them cross-bracket style
-  // For 4 teams (size=4): WB R1 has 2 matches → LB R1 has 1 match
-  //   LB R1[0].t1 = loser of WB R1[1], LB R1[0].t2 = loser of WB R1[0]  (cross-seeded)
-  // For 8 teams (size=8): WB R1 has 4 matches → LB R1 has 2 matches
-  //   LB R1[0].t1 = loser WBR1[2], t2 = loser WBR1[1]
-  //   LB R1[1].t1 = loser WBR1[3], t2 = loser WBR1[0]  (cross pattern)
-  const wbR1=wbRounds[0];
-  const lbR1=lbRounds[0];
+  // LB R0: cross-seed WB R1 losers
+  // For size S, WB R1 has S/2 matches → LB R0 has S/4 matches
+  // Pairing: match i gets top-half loser[i] vs bottom-half loser[mirrored]
+  // e.g. 8 teams: WB R1 = [m1,m2,m3,m4], LB R0 = [la,lb]
+  //   la: loser(m4) vs loser(m1)
+  //   lb: loser(m3) vs loser(m2)
+  const wbR1=wbR[0];
   const half=wbR1.length/2;
-  lbR1.forEach((m,i)=>{
-    m.t1=wbR1[half+i]?wbR1[half+i].loser:null;
-    m.t2=wbR1[i]?wbR1[i].loser:null;
-    m.lbl1=`Loser of ${wbR1[half+i]?wbR1[half+i].id:'?'}`;
-    m.lbl2=`Loser of ${wbR1[i]?wbR1[i].id:'?'}`;
-    if(m.winner&&(m.winner!==m.t1&&m.winner!==m.t2))m.winner=null;
-    if(m.t1&&!m.t2)m.winner=m.t1;
-    if(m.t2&&!m.t1)m.winner=m.t2;
-    if(m.winner)m.loser=null;
+  lbR[0].forEach((m,i)=>{
+    const top=wbR1[i];
+    const bot=wbR1[wbR1.length-1-i];
+    m.lbl1=bot?`Loser of ${bot.id}`:'—';
+    m.lbl2=top?`Loser of ${top.id}`:'—';
+    setM(m, bot?bot.loser:null, top?top.loser:null);
   });
 
-  // Propagate remaining LB rounds
-  for(let r=1;r<lbRounds.length;r++){
-    const rd=lbRounds[r];
-    const prev=lbRounds[r-1];
-    const isDropIn=(r%2===0); // 0-indexed: r=0 drop-in, r=1 consol, r=2 drop-in...
-    // Actually r=0→drop-in, r=1→consol, r=2→drop-in, r=3→consol
-    // drop-in rounds: r%2===0
-    // consol rounds: r%2===1
-    if(r%2===1){
-      // Consolidation: t1 from prev LB winner, t2 from WB drop-in
-      const wbDropRound=wbRounds[Math.floor(r/2)+1];
-      rd.forEach((m,i)=>{
-        m.t1=prev[i]?prev[i].winner:null;
-        m.t2=wbDropRound&&wbDropRound[i]?wbDropRound[i].loser:null;
-        m.lbl1=prev[i]?`Winner of ${prev[i].id}`:'—';
-        m.lbl2=wbDropRound&&wbDropRound[i]?`Loser of ${wbDropRound[i].id}`:'—';
-        if(m.winner&&(m.winner!==m.t1&&m.winner!==m.t2))m.winner=null;
-        if(m.t1&&!m.t2)m.winner=m.t1;
-        if(m.t2&&!m.t1)m.winner=m.t2;
-        if(m.winner)m.loser=null;
+  // LB R1+
+  for(let r=1;r<lbR.length;r++){
+    const prev=lbR[r-1];
+    const isDropIn=(r%2===0);
+    if(!isDropIn){
+      // Consolidation: pair up previous LB round winners
+      // If same count: each match[i] = prev[i*2].winner vs prev[i*2+1].winner
+      // If same count as prev (drop-in case): match[i] = prev[i].winner vs wbDrop[i].loser
+      // Wait — odd rounds are consolidation of SAME count as prev (WB dropped in as t2 last round)
+      // So: each match[i].t1 = prev[i].winner, .t2 = wbDrop.loser
+      const wbDrop=wbR[Math.ceil(r/2)];
+      lbR[r].forEach((m,i)=>{
+        const p=prev[i];
+        const wd=wbDrop?wbDrop[i]:null;
+        m.lbl1=p?`Winner of ${p.id}`:'—';
+        m.lbl2=wd?`Loser of ${wd.id}`:'—';
+        setM(m, p?p.winner:null, wd?wd.loser:null);
       });
     } else {
-      // Consolidation (even r>0): both from prev LB winners
-      rd.forEach((m,i)=>{
-        const s1=prev[i*2], s2=prev[i*2+1];
-        m.t1=s1?s1.winner:null;
-        m.t2=s2?s2.winner:null;
-        m.lbl1=s1?`Winner of ${s1.id}`:'—';
-        m.lbl2=s2?`Winner of ${s2.id}`:'—';
-        if(m.winner&&(m.winner!==m.t1&&m.winner!==m.t2))m.winner=null;
-        if(m.t1&&!m.t2)m.winner=m.t1;
-        if(m.t2&&!m.t1)m.winner=m.t2;
-        if(m.winner)m.loser=null;
+      // Drop-in consolidation: pair prev LB winners together (count halves)
+      lbR[r].forEach((m,i)=>{
+        const p1=prev[i*2],p2=prev[i*2+1];
+        m.lbl1=p1?`Winner of ${p1.id}`:'—';
+        m.lbl2=p2?`Winner of ${p2.id}`:'—';
+        setM(m, p1?p1.winner:null, p2?p2.winner:null);
       });
     }
   }
 
-  // GF
-  const wbFin=wbRounds[wbRounds.length-1][0];
-  const lbFin=lbRounds[lbRounds.length-1][0];
-  gf.t1=wbFin.winner;
-  gf.t2=lbFin.winner;
-  gf.lbl1=`Winner of ${wbFin.id}`;
-  gf.lbl2=`Winner of ${lbFin.id}`;
-  if(gf.winner&&(gf.winner!==gf.t1&&gf.winner!==gf.t2))gf.winner=null;
-  if(gf.t1&&!gf.t2)gf.winner=gf.t1;
-  if(gf.t2&&!gf.t1)gf.winner=gf.t2;
+  // GF1: WB winner vs LB winner
+  const wbFin=wbR[wbR.length-1][0];
+  const lbFin=lbR[lbR.length-1][0];
+  gf1.lbl1=`Winner of ${wbFin.id}`;
+  gf1.lbl2=`Winner of ${lbFin.id}`;
+  setM(gf1, wbFin.winner, lbFin.winner);
 
-  // GF2 (if necessary)
-  gf2.t1=gf.winner;
-  gf2.t2=gf.winner?(gf.winner===gf.t1?gf.t2:gf.t1):null;
-  if(gf2.winner&&(gf2.winner!==gf2.t1&&gf2.winner!==gf2.t2))gf2.winner=null;
+  // GF2 (if necessary): only if LB winner beats WB winner in GF1
+  const gf2t1=gf1.winner||null;
+  const gf2t2=(gf1.t1&&gf1.t2&&gf1.winner)?
+    (gf1.winner===gf1.t1?gf1.t2:gf1.t1):null;
+  gf2.lbl1=gf1.winner?`Winner of ${gf1.id}`:'—';
+  gf2.lbl2='If necessary';
+  setM(gf2, gf2t1, gf2t2);
 
-  _de.champion=gf2.winner||gf.winner;
+  // Champion: WB winner wins GF1 → instant champ; else GF2 winner
+  DE.champ = (gf1.winner&&gf1.winner===gf1.t1) ? gf1.winner : gf2.winner;
 }
 
 function clickDE(id,side){
-  const m=M[id];
+  const m=ALL_M[id];
   if(!m||!m.t1||!m.t2)return;
   m.winner=side===1?m.t1:m.t2;
   m.loser=side===1?m.t2:m.t1;
-  propagateDE();
-  renderDE();
+  propagateDE();renderDE();
 }
 
 function renderDE(){
-  const{wbRounds,lbRounds,gf,gf2,nWBR}=_de;
-  // Layout
-  const MW=175, MH=60, HGAP=65, VPAD=14;
-  const TOP_WB=48, LEFT=30;
+  const{wbR,lbR,gf1,gf2,nR}=DE;
+  const TOP=55, LEFT=30;
+  const WB_SLOT=MH+30; // vertical slot height in WB
+  const LB_SLOT=MH+26; // vertical slot height in LB
 
-  const nWB=wbRounds.length, nLB=lbRounds.length;
-  const wbSlots=wbRounds[0].length;
-  const slotH=MH+VPAD*2; // height of one "slot" row in WB
+  const nWBSlots=wbR[0].length;
+  const wbH=nWBSlots*WB_SLOT;
+  const LB_TOP=TOP+wbH+72;
 
-  const wbH=wbSlots*slotH;
-  const wbBottom=TOP_WB+wbH;
-  const lbTop=wbBottom+60;
-  const lbSlots=Math.max(...lbRounds.map(r=>r.length));
-  const lbSlotH=MH+VPAD*2;
-  const lbH=lbSlots*lbSlotH;
+  const nLBSlots=lbR[0].length;
+  const lbH=nLBSlots*LB_SLOT;
 
-  // GF sits to the right, vertically centered between WB and LB
-  const gfCol=LEFT+Math.max(nWB,nLB)*(MW+HGAP);
-  const gfCy=(TOP_WB+wbH/2+lbTop+lbH/2)/2;
+  const nCols=Math.max(wbR.length, lbR.length);
+  const GF_COL=LEFT+nCols*(MW+HGAP)+10;
 
-  const svgW=gfCol+MW+180;
-  const svgH=lbTop+lbH+40;
+  // GF vertically centered between WB midpoint and LB midpoint
+  const wbMid=TOP+wbH/2;
+  const lbMid=LB_TOP+lbH/2;
+  const GF1_CY=(wbMid+lbMid)/2;
+  const GF1_Y=GF1_CY-MH/2;
+  const GF2_Y=GF1_Y+MH+40;
+
+  const svgW=GF_COL+MW+180;
+  const svgH=LB_TOP+lbH+50;
+  const rdNames=getRdNames(wbR.length);
 
   let o='';
 
+  // ── Section labels ──────────────────────────────────────────────
+  o+=sLabel('WINNERS BRACKET',LEFT,TOP-28);
+  o+=sLabel('LOSERS BRACKET',LEFT,LB_TOP-22);
+
   // ── WB ──────────────────────────────────────────────────────────
-  o+=secLabel('WINNERS BRACKET', LEFT, TOP_WB-20);
-  const wbRdNames=getRoundNames(nWB);
-  wbRounds.forEach((rd,ri)=>{
+  wbR.forEach((rd,ri)=>{
     const x=LEFT+ri*(MW+HGAP);
-    o+=rdLabel(wbRdNames[ri],x,MW,TOP_WB-6);
+    o+=rLabel(rdNames[ri],x+MW/2,TOP-10);
     const span=Math.pow(2,ri);
     rd.forEach((m,mi)=>{
-      const cy=TOP_WB+(mi*span*2+span)*slotH;
+      // Center-Y for this match within WB grid
+      const cy=TOP+(mi*span*2+span)*WB_SLOT;
       const y=cy-MH/2;
-      o+=matchBox(m,x,y,MW,MH,'clickDE');
-      if(ri<nWB-1){
-        const nspan=Math.pow(2,ri+1);
-        const ncy=TOP_WB+(Math.floor(mi/2)*nspan*2+nspan)*slotH;
+      o+=drawMatch(m,x,y,'clickDE');
+      if(ri<wbR.length-1){
+        const ns=Math.pow(2,ri+1);
+        const ncy=TOP+(Math.floor(mi/2)*ns*2+ns)*WB_SLOT;
         o+=conn(x+MW,cy,x+MW+HGAP,ncy);
       }
     });
   });
+  o+=rLabel('FINAL',GF_COL+MW/2,TOP-10);
+
+  // WB Final → GF1 (top slot)
+  const wbFinSpan=Math.pow(2,wbR.length-1);
+  const wbFinCy=TOP+wbFinSpan*WB_SLOT;
+  const wbFinX=LEFT+(wbR.length-1)*(MW+HGAP)+MW;
+  o+=conn(wbFinX,wbFinCy,GF_COL,GF1_CY-MH/4);
 
   // ── LB ──────────────────────────────────────────────────────────
-  o+=secLabel('LOSERS BRACKET', LEFT, lbTop-10);
-  lbRounds.forEach((rd,ri)=>{
+  lbR.forEach((rd,ri)=>{
     const x=LEFT+ri*(MW+HGAP);
-    o+=rdLabel(`LB R${ri+1}`,x,MW,lbTop+2);
+    o+=rLabel(`LB R${ri+1}`,x+MW/2,LB_TOP-8);
     const spacing=lbH/rd.length;
     rd.forEach((m,mi)=>{
-      const cy=lbTop+16+mi*spacing+spacing/2;
+      const cy=LB_TOP+mi*spacing+spacing/2;
       const y=cy-MH/2;
-      o+=matchBox(m,x,y,MW,MH,'clickDE');
-      if(ri<nLB-1){
-        const nextRd=lbRounds[ri+1];
+      o+=drawMatch(m,x,y,'clickDE');
+      if(ri<lbR.length-1){
+        const nextRd=lbR[ri+1];
         const nSpacing=lbH/nextRd.length;
-        // which slot does this winner feed?
+        // Determine target index in next round
         let nmi;
-        if(ri%2===0){
-          // consolidation feeds: winners pair up
-          nmi=Math.floor(mi/2);
-        } else {
-          // drop-in: winner stays in same slot, WB drop feeds as t2
+        const isDropIn=(ri%2===0); // current round is drop-in
+        if(isDropIn){
+          // next round is consolidation (same count) → same index
           nmi=mi;
+        } else {
+          // next round halves → floor(mi/2)
+          nmi=Math.floor(mi/2);
         }
-        const ncy=lbTop+16+nmi*nSpacing+nSpacing/2;
+        const ncy=LB_TOP+nmi*nSpacing+nSpacing/2;
         o+=conn(x+MW,cy,x+MW+HGAP,ncy);
       }
     });
   });
 
-  // ── Grand Final ──────────────────────────────────────────────────
-  const gfY=gfCy-MH/2;
-  o+=`<text x="${gfCol+MW/2}" y="${gfY-12}" text-anchor="middle" fill="${C_WIN}" font-family="Cinzel,serif" font-size="10" letter-spacing="3">GRAND FINAL</text>`;
-  o+=matchBox(gf,gfCol,gfY,MW,MH,'clickDE');
+  // LB Final → GF1 (bottom slot)
+  const lbFinX=LEFT+(lbR.length-1)*(MW+HGAP)+MW;
+  const lbFinSpacing=lbH/lbR[lbR.length-1].length;
+  const lbFinCy=LB_TOP+lbFinSpacing/2;
+  o+=conn(lbFinX,lbFinCy,GF_COL,GF1_CY+MH/4);
 
-  // GF2 — "if necessary", positioned below GF
-  const gf2Y=gfY+MH+30;
-  o+=`<text x="${gfCol+MW/2}" y="${gf2Y-10}" text-anchor="middle" fill="#3a2a0a" font-family="Cinzel,serif" font-size="9" letter-spacing="2" font-style="italic">if necessary</text>`;
-  o+=matchBox(gf2,gfCol,gf2Y,MW,MH,'clickDE');
+  // ── Grand Final ─────────────────────────────────────────────────
+  o+=`<text x="${GF_COL+MW/2}" y="${GF1_Y-14}" text-anchor="middle" fill="#c9a84c" font-family="Cinzel,serif" font-size="10" letter-spacing="3">GRAND FINAL</text>`;
+  o+=drawMatch(gf1,GF_COL,GF1_Y,'clickDE');
+  o+=`<text x="${GF_COL+MW/2}" y="${GF2_Y-10}" text-anchor="middle" fill="#2d2000" font-family="Cinzel,serif" font-size="9" letter-spacing="2" font-style="italic">if necessary</text>`;
+  o+=drawMatch(gf2,GF_COL,GF2_Y,'clickDE');
 
-  // Champion line off GF2
-  if(_de.champion){
-    o+=hline(gfCol+MW,gfCol+MW+30,gf2Y+MH/2,C_WIN);
-    o+=`<text x="${gfCol+MW+36}" y="${gf2Y+MH/2}" dominant-baseline="middle" fill="${C_WIN}" font-family="Cinzel,serif" font-size="11" letter-spacing="2">CHAMPION</text>`;
+  // Champion
+  if(DE.champ){
+    const champCy=DE.champ===gf2.winner ? GF2_Y+MH/2 : GF1_Y+MH/2;
+    o+=hline(GF_COL+MW,GF_COL+MW+28,champCy,'#c9a84c');
+    o+=`<text x="${GF_COL+MW+34}" y="${champCy}" dominant-baseline="middle" fill="#c9a84c" font-family="Cinzel,serif" font-size="11" letter-spacing="2">CHAMPION</text>`;
   }
-
-  // Connectors: WB final → GF t1
-  const wbFinRd=wbRounds[nWB-1];
-  const wbFinSpan=Math.pow(2,nWB-1);
-  const wbFinCy=TOP_WB+wbFinSpan*slotH;
-  const wbFinX=LEFT+(nWB-1)*(MW+HGAP)+MW;
-  o+=conn(wbFinX,wbFinCy,gfCol,gfCy-MH/4);
-
-  // LB final → GF t2
-  const lbFinRd=lbRounds[nLB-1];
-  const lbFinSpacing=lbH/lbFinRd.length;
-  const lbFinCy=lbTop+16+lbFinSpacing/2;
-  const lbFinX=LEFT+(nLB-1)*(MW+HGAP)+MW;
-  o+=conn(lbFinX,lbFinCy,gfCol,gfCy+MH/4);
 
   document.getElementById('bcont').innerHTML=
     `<div class="bwrap"><svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">${o}</svg></div>`;
-  setChamp(_de.champion||null);
+  setChamp(DE.champ||null);
 }
 </script>
 </body>
