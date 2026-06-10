@@ -334,7 +334,6 @@ function buildMatches(players) {
 //   9-16 -> 16-player bracket
 //   17-32 -> 32-player bracket
 function bracketSizeFor(n) {
-  if (n <= 4)  return 4;
   if (n <= 8)  return 8;
   if (n <= 16) return 16;
   return 32;

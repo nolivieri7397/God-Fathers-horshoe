@@ -22,6 +22,7 @@ Current Status:
 - Multiple tournament management implemented (create, open, rename, delete).
 - Random team generation implemented (enter players, pick team size 1–4, generates randomized bracket).
 - Team generation moved to SetupScreen.jsx (separate setup screen before bracket).
+- Fixed 3–4 participant brackets to use 8-slot template with BYEs (bracketSizeFor minimum raised from 4 to 8).
 
 Development Rules:
 - Bracket.jsx is stable.
