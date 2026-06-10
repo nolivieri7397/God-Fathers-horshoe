@@ -497,7 +497,7 @@ function buildSlotSources(matches) {
 const CARD_H   = 44;              // match height px (2 rows ~22px each incl. padding + border)
 const BASE_GAP =  8;              // gap between cards in a round-1 column
 const SLOT_H   = CARD_H + BASE_GAP;  // 52 — vertical space each R1 match "owns"
-const CONN_W   = 20;              // pixel width of each connector SVG strip
+const CONN_W   = 32;              // pixel width of each connector SVG strip
 const LABEL_H  = 20;              // pixel height of a round-column label row
 
 // Gap between match cards in a WB column at round-index r (1-based).
@@ -630,7 +630,7 @@ function WbConnectors({ leftRoundIndex, numLeft }) {
     <svg width={CONN_W} height={svgH}
       style={{ flexShrink: 0, display: "block", overflow: "visible", alignSelf: "flex-start" }}
     >
-      <g stroke="#5a4030" strokeWidth={1} fill="none">
+      <g stroke="#8a6840" strokeWidth={1.5} fill="none">
         {lines}
       </g>
     </svg>
