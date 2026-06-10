@@ -491,6 +491,24 @@ function buildSlotSources(matches) {
 }
 
 // ---------------------------------------------------------------------------
+// Layout constants — drives vertical centering and connector geometry
+// ---------------------------------------------------------------------------
+
+const CARD_H   = 44;              // match height px (2 rows ~22px each incl. padding + border)
+const BASE_GAP =  8;              // gap between cards in a round-1 column
+const SLOT_H   = CARD_H + BASE_GAP;  // 52 — vertical space each R1 match "owns"
+const CONN_W   = 20;              // pixel width of each connector SVG strip
+const LABEL_H  = 20;              // pixel height of a round-column label row
+
+// Gap between match cards in a WB column at round-index r (1-based).
+// Doubles with each round so later rounds space out to stay centered on their feeders.
+function wbGapFor(r) { return Math.pow(2, r - 1) * SLOT_H - CARD_H; }
+
+// Padding-top for a WB column at round-index r so its first card centers on
+// the midpoint between its two R1 feeder matches.
+function wbPaddingFor(r) { return (Math.pow(2, r - 1) - 1) * SLOT_H / 2; }
+
+// ---------------------------------------------------------------------------
 // UI components
 // ---------------------------------------------------------------------------
 
@@ -559,30 +577,68 @@ function MatchCard({ match, onPick, slotSources }) {
 }
 
 // A vertical stack of MatchCards under a round label.
-function RoundCol({ label, matchIds, matches, onPick, slotSources }) {
+// roundIndex (1-based) drives WB centering math; omit for LB/Finals (flat layout).
+function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex }) {
+  const gap = roundIndex != null ? wbGapFor(roundIndex)    : BASE_GAP;
+  const pt  = roundIndex != null ? wbPaddingFor(roundIndex) : 0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ width: 128, flexShrink: 0 }}>
       <div style={{
-        fontSize: 9,
-        color: "#5a4030",
-        textAlign: "center",
-        letterSpacing: "0.15em",
-        textTransform: "uppercase",
+        fontSize: 9, color: "#5a4030", textAlign: "center",
+        letterSpacing: "0.15em", textTransform: "uppercase",
         fontFamily: "var(--font-mono)",
         borderBottom: "1px solid #1e160a",
-        paddingBottom: 5,
-        marginBottom: 2,
-        width: 128,
+        paddingBottom: 5, marginBottom: 2,
       }}>{label}</div>
-      {matchIds.map(id => (
-        <MatchCard key={id} match={matches[id]} onPick={onPick} slotSources={slotSources} />
-      ))}
+      <div style={{ paddingTop: pt }}>
+        {matchIds.map((id, i) => (
+          <div key={id}>
+            {i > 0 && <div style={{ height: gap }} />}
+            <MatchCard match={matches[id]} onPick={onPick} slotSources={slotSources} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
+// SVG connector strip drawn between two consecutive WB columns.
+// Renders one ⊢-shaped fork per match-pair: two horizontal stubs → vertical bar → one output stub.
+function WbConnectors({ leftRoundIndex, numLeft }) {
+  const leftPt   = wbPaddingFor(leftRoundIndex);
+  const leftGap  = wbGapFor(leftRoundIndex);
+  const rightPt  = wbPaddingFor(leftRoundIndex + 1);
+  const rightGap = wbGapFor(leftRoundIndex + 1);
+  const numPairs = Math.floor(numLeft / 2);
+  const midX     = CONN_W / 2;
+  const svgH     = LABEL_H + leftPt + numLeft * CARD_H + Math.max(0, numLeft - 1) * leftGap + 10;
+
+  const lines = [];
+  for (let j = 0; j < numPairs; j++) {
+    const yTop = LABEL_H + leftPt  + (2 * j)     * (CARD_H + leftGap)  + CARD_H / 2;
+    const yBot = LABEL_H + leftPt  + (2 * j + 1) * (CARD_H + leftGap)  + CARD_H / 2;
+    const yMid = LABEL_H + rightPt + j            * (CARD_H + rightGap) + CARD_H / 2;
+    lines.push(
+      <line key={`h1-${j}`} x1={0}      y1={yTop} x2={midX}   y2={yTop} />,
+      <line key={`h2-${j}`} x1={0}      y1={yBot} x2={midX}   y2={yBot} />,
+      <line key={`vt-${j}`} x1={midX}   y1={yTop} x2={midX}   y2={yBot} />,
+      <line key={`ho-${j}`} x1={midX}   y1={yMid} x2={CONN_W} y2={yMid} />,
+    );
+  }
+
+  return (
+    <svg width={CONN_W} height={svgH}
+      style={{ flexShrink: 0, display: "block", overflow: "visible", alignSelf: "flex-start" }}
+    >
+      <g stroke="#3a2810" strokeWidth={1} fill="none">
+        {lines}
+      </g>
+    </svg>
+  );
+}
+
 // A bracket section (WB / LB / Finals) with an engraved gold header.
-function Section({ title, accentColor, children }) {
+function Section({ title, accentColor, children, colGap = 14 }) {
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, borderBottom: "1px solid #2a1c0c", paddingBottom: 8 }}>
@@ -594,7 +650,7 @@ function Section({ title, accentColor, children }) {
         }}>{title}</span>
       </div>
       <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: "max-content" }}>
+        <div style={{ display: "flex", gap: colGap, alignItems: "flex-start", minWidth: "max-content" }}>
           {children}
         </div>
       </div>
@@ -920,23 +976,23 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
   // Bracket layout definitions — each entry is one RoundCol.
   const wbCols = templateSize === 32
     ? [
-        { label: "Round 1", ids: ["W1-1","W1-2","W1-3","W1-4","W1-5","W1-6","W1-7","W1-8","W1-9","W1-10","W1-11","W1-12","W1-13","W1-14","W1-15","W1-16"] },
-        { label: "Round 2", ids: ["W2-1","W2-2","W2-3","W2-4","W2-5","W2-6","W2-7","W2-8"] },
-        { label: "Round 3", ids: ["W3-1","W3-2","W3-3","W3-4"] },
-        { label: "Round 4", ids: ["W4-1","W4-2"] },
-        { label: "WB Final", ids: ["W5-1"] },
+        { label: "Round 1",  ids: ["W1-1","W1-2","W1-3","W1-4","W1-5","W1-6","W1-7","W1-8","W1-9","W1-10","W1-11","W1-12","W1-13","W1-14","W1-15","W1-16"], roundIndex: 1 },
+        { label: "Round 2",  ids: ["W2-1","W2-2","W2-3","W2-4","W2-5","W2-6","W2-7","W2-8"], roundIndex: 2 },
+        { label: "Round 3",  ids: ["W3-1","W3-2","W3-3","W3-4"], roundIndex: 3 },
+        { label: "Round 4",  ids: ["W4-1","W4-2"], roundIndex: 4 },
+        { label: "WB Final", ids: ["W5-1"], roundIndex: 5 },
       ]
     : templateSize === 16
     ? [
-        { label: "Round 1", ids: ["W1-1","W1-2","W1-3","W1-4","W1-5","W1-6","W1-7","W1-8"] },
-        { label: "Round 2", ids: ["W2-1","W2-2","W2-3","W2-4"] },
-        { label: "Round 3", ids: ["W3-1","W3-2"] },
-        { label: "WB Final", ids: ["W4-1"] },
+        { label: "Round 1",  ids: ["W1-1","W1-2","W1-3","W1-4","W1-5","W1-6","W1-7","W1-8"], roundIndex: 1 },
+        { label: "Round 2",  ids: ["W2-1","W2-2","W2-3","W2-4"], roundIndex: 2 },
+        { label: "Round 3",  ids: ["W3-1","W3-2"], roundIndex: 3 },
+        { label: "WB Final", ids: ["W4-1"], roundIndex: 4 },
       ]
     : [
-        { label: "Round 1", ids: ["W1-1","W1-2","W1-3","W1-4"] },
-        { label: "Round 2", ids: ["W2-1","W2-2"] },
-        { label: "WB Final", ids: ["W3-1"] },
+        { label: "Round 1",  ids: ["W1-1","W1-2","W1-3","W1-4"], roundIndex: 1 },
+        { label: "Round 2",  ids: ["W2-1","W2-2"], roundIndex: 2 },
+        { label: "WB Final", ids: ["W3-1"], roundIndex: 3 },
       ];
 
   const lbCols = templateSize === 32
@@ -1176,10 +1232,16 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
       </div>
 
       {/* Bracket sections */}
-      <Section title="Winners bracket" accentColor="#c9954a">
-        {wbCols.map(({ label, ids }) => (
-          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
-        ))}
+      <Section title="Winners bracket" accentColor="#c9954a" colGap={0}>
+        {wbCols.flatMap((col, i) => {
+          const items = [
+            <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
+              onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} />,
+          ];
+          if (i < wbCols.length - 1)
+            items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
+          return items;
+        })}
       </Section>
 
       <Section title="Losers bracket" accentColor="#9b8461">
