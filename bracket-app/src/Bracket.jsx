@@ -528,9 +528,9 @@ function MatchCard({ match, onPick, slotSources }) {
         const isTbd     = !p;
 
         const nameColor = isWinner ? "#2fa66a"
-                        : isLoser  ? "#2a1c0c"
-                        : isBye    ? "#3a2810"
-                        : isTbd    ? "#2a1c0c"
+                        : isLoser  ? "#5a4030"
+                        : isBye    ? "#4a3420"
+                        : isTbd    ? "#4a3420"
                         : clickable ? "#e0b96f"
                         : "#9b8461";
 
@@ -548,7 +548,7 @@ function MatchCard({ match, onPick, slotSources }) {
               alignItems: "center",
               gap: 4,
               padding: "3px 0",
-              borderBottom: "1px solid #2a1c0c",
+              borderBottom: "1px solid #3a2810",
               cursor: clickable ? "pointer" : "default",
               userSelect: "none",
             }}
@@ -564,7 +564,7 @@ function MatchCard({ match, onPick, slotSources }) {
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              opacity: isLoser ? 0.35 : 1,
+              opacity: isLoser ? 0.5 : 1,
             }}>
               {displayName}
             </span>
@@ -584,10 +584,10 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex })
   return (
     <div style={{ width: 128, flexShrink: 0 }}>
       <div style={{
-        fontSize: 9, color: "#5a4030", textAlign: "center",
+        fontSize: 10, color: "#7a5840", textAlign: "center",
         letterSpacing: "0.15em", textTransform: "uppercase",
         fontFamily: "var(--font-mono)",
-        borderBottom: "1px solid #1e160a",
+        borderBottom: "1px solid #3a2810",
         paddingBottom: 5, marginBottom: 2,
       }}>{label}</div>
       <div style={{ paddingTop: pt }}>
@@ -630,7 +630,7 @@ function WbConnectors({ leftRoundIndex, numLeft }) {
     <svg width={CONN_W} height={svgH}
       style={{ flexShrink: 0, display: "block", overflow: "visible", alignSelf: "flex-start" }}
     >
-      <g stroke="#3a2810" strokeWidth={1} fill="none">
+      <g stroke="#5a4030" strokeWidth={1} fill="none">
         {lines}
       </g>
     </svg>
@@ -642,7 +642,7 @@ function Section({ title, accentColor, children, colGap = 14 }) {
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, borderBottom: "1px solid #2a1c0c", paddingBottom: 8 }}>
-        <span style={{ color: "#3a2810", fontSize: 12 }}>◆</span>
+        <span style={{ color: "#5a4030", fontSize: 12 }}>◆</span>
         <span style={{
           fontSize: 11, fontWeight: 700, letterSpacing: "0.2em",
           textTransform: "uppercase", color: accentColor,
@@ -1032,6 +1032,12 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
   const allR1Real  = playInIds.length === wbR1Ids.length; // perfect power-of-2 — no change
   const wbMainCols = allR1Real ? wbCols : wbCols.slice(1); // skip R1 col when BYEs present
 
+  // LB play-in — same display-only filter applied to Losers Bracket Round 1.
+  const lbR1Ids       = lbCols[0].ids;
+  const lbPlayInIds   = lbR1Ids.filter(id => !matches[id]?.slots?.some(s => s?.isBye));
+  const allLbR1Real   = lbPlayInIds.length === lbR1Ids.length;
+  const lbMainCols    = allLbR1Real ? lbCols : lbCols.slice(1);
+
   const goldBtn = (disabled) => ({
     fontSize: 12, padding: "5px 11px", borderRadius: 2, cursor: disabled ? "not-allowed" : "pointer",
     border: "1px solid #c9954a", background: "#120d08",
@@ -1260,8 +1266,13 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
       </Section>
 
       <Section title="Losers bracket" accentColor="#9b8461">
-        {lbCols.map(({ label, ids }) => (
-          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
+        {!allLbR1Real && lbPlayInIds.length > 0 && (
+          <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
+            onPick={handlePick} slotSources={slotSources} />
+        )}
+        {lbMainCols.map(({ label, ids }) => (
+          <RoundCol key={label} label={label} matchIds={ids} matches={matches}
+            onPick={handlePick} slotSources={slotSources} />
         ))}
       </Section>
 
