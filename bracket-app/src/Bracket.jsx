@@ -14,6 +14,8 @@
 
 import { useState, useEffect, useRef } from "react";
 
+const STORAGE_KEY_PREFIX = "de_tournament_";
+const DEFAULT_TOURNAMENT_ID = "default";
 const STORAGE_KEY = "de_bracket_v2";
 
 const DEFAULT_NAMES_8 = [
@@ -601,7 +603,7 @@ function Section({ title, accentColor, children }) {
 // App
 // ---------------------------------------------------------------------------
 
-export default function App() {
+export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, initialPlayerCount }) {
   const [playerCount, setPlayerCount] = useState(8);
   const [names,       setNames]       = useState([...DEFAULT_NAMES_8]);
   const [matches,     setMatches]     = useState(null);
@@ -766,36 +768,51 @@ export default function App() {
   // Restore saved bracket on first load, or initialise with defaults.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const { matches: m, names: n, playerCount: pc, tournamentName: tn = "", humanPickMade: hpm = false } = JSON.parse(saved);
         setMatches(m);
         setNames(n);
         setPlayerCount(pc);
+        setCountInput(String(pc));
         setTournamentName(tn);
         setHumanPickMade(hpm);
         return;
       }
     } catch (e) {}
-    // Nothing saved — build a fresh default bracket.
+    // Nothing saved — build a fresh bracket from initialNames if provided, else defaults.
+    if (initialNames && initialNames.length >= 2) {
+      const count = Math.max(3, Math.min(32, initialPlayerCount ?? initialNames.length));
+      const names = initialNames.slice(0, count);
+      setPlayerCount(count);
+      setCountInput(String(count));
+      setNames(names);
+      const templateSize  = bracketSizeFor(count);
+      const realPlayers   = names.map((name, i) => ({ id: `p${i + 1}`, name }));
+      const paddedPlayers = padWithByes(realPlayers, templateSize);
+      const m = autoAdvanceByes(buildMatches(paddedPlayers));
+      setMatches(m);
+      persist(m, names, count, false);
+      return;
+    }
     const players = DEFAULT_NAMES_8.map((name, i) => ({ id: `p${i + 1}`, name }));
     setMatches(buildMatches(players));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Saves the full bracket state to localStorage after every change.
   // tournamentName is read directly from state — no need to pass it as an arg
   // since it's only updated via its own handler which persists immediately.
   const persist = (m, n, pc, hpm = humanPickMade) => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm })); } catch (e) {}
+    try { localStorage.setItem(storageKey, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm })); } catch (e) {}
   };
 
   // Updates the tournament name and saves it to localStorage straight away.
   const handleTournamentNameChange = (value) => {
     setTournamentName(value);
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(storageKey);
       const base  = saved ? JSON.parse(saved) : {};
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...base, tournamentName: value }));
+      localStorage.setItem(storageKey, JSON.stringify({ ...base, tournamentName: value }));
     } catch (e) {}
   };
 
@@ -873,7 +890,7 @@ export default function App() {
   // Resets everything to defaults for the current player count.
   const handleReset = () => {
     const defaultNames = Array.from({ length: playerCount }, (_, i) => `Player ${i + 1}`);
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
     setHumanPickMade(false);
     setHistory([]);
     setNames(defaultNames);
@@ -883,7 +900,7 @@ export default function App() {
   // Deletes the saved bracket from localStorage without changing the live state.
   // Useful when you want to start fresh on next page load without resetting now.
   const handleClearSaved = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   };
 
   if (!matches) return null;
@@ -950,6 +967,13 @@ export default function App() {
 
   return (
     <div ref={bracketRef} style={{ padding: "1.25rem 1rem", maxWidth: 1200, margin: "0 auto" }}>
+      {/* Back to tournament list */}
+      {onBack && (
+        <button onClick={onBack} style={{
+          marginBottom: 12, background: "none", border: "none",
+          color: "var(--color-text-tertiary)", cursor: "pointer", fontSize: 13, padding: 0,
+        }}>← All tournaments</button>
+      )}
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
