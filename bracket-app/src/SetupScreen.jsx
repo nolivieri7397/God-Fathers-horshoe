@@ -48,6 +48,8 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
 
   return (
     <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem", fontFamily: "var(--font-mono, monospace)" }}>
+      <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
+        style={{ display: "block", margin: "0 auto 24px", width: "90%", maxWidth: 720, height: "auto" }} />
       {/* Back */}
       <button onClick={onBack} style={{
         background: "none", border: "none", color: "var(--color-text-tertiary, #888)",

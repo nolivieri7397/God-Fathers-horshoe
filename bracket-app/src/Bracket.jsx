@@ -966,6 +966,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
 
   return (
     <div ref={bracketRef} style={{ padding: "1.25rem 1rem", maxWidth: 1200, margin: "0 auto" }}>
+      <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
+        style={{ display: "block", margin: "0 auto 20px", width: "90%", maxWidth: 720, height: "auto" }} />
       {/* Back to tournament list */}
       {onBack && (
         <button onClick={onBack} style={{

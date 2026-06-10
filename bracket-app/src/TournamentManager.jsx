@@ -82,6 +82,8 @@ export default function TournamentManager({ onOpen, onSetup }) {
 
   return (
     <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem", fontFamily: "var(--font-mono, monospace)" }}>
+      <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
+        style={{ display: "block", margin: "0 auto 28px", width: "90%", maxWidth: 720, height: "auto" }} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Tournaments</h2>
         <button onClick={handleCreate} style={{
