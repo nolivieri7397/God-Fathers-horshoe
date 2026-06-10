@@ -500,6 +500,9 @@ const SLOT_H   = CARD_H + BASE_GAP;  // 52 — vertical space each R1 match "own
 const CONN_W   = 32;              // pixel width of each connector SVG strip
 const LABEL_H  = 20;              // pixel height of a round-column label row
 
+// Unified bracket canvas — Phase 1 (off by default)
+const USE_UNIFIED_CANVAS = false;
+
 // Gap between match cards in a WB column at round-index r (1-based).
 // Doubles with each round so later rounds space out to stay centered on their feeders.
 function wbGapFor(r) { return Math.pow(2, r - 1) * SLOT_H - CARD_H; }
@@ -671,6 +674,51 @@ function Section({ title, accentColor, children, colGap = 14 }) {
         <div style={{ display: "flex", gap: colGap, alignItems: "flex-start", minWidth: "max-content" }}>
           {children}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Phase 1 unified canvas — WB row, spacer, LB row (no Finals, Play-In, or WB→LB drops).
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols }) {
+  const ROW_SPACER = 48;
+
+  return (
+    <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+      <div style={{ display: "flex", gap: 0, alignItems: "flex-start", minWidth: "max-content" }}>
+        {wbCols.flatMap((col, i) => {
+          const items = [
+            <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
+              onPick={onPick} slotSources={slotSources} roundIndex={col.roundIndex} />,
+          ];
+          if (i < wbCols.length - 1)
+            items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
+          return items;
+        })}
+      </div>
+      <div style={{ height: ROW_SPACER }} />
+      <div style={{ display: "flex", gap: 0, alignItems: "flex-start", minWidth: "max-content" }}>
+        {(() => {
+          let mergeLevel = 1;
+          return lbCols.flatMap((col, i) => {
+            const roundIndex = mergeLevel + 1;
+            const items = [
+              <RoundCol key={col.label} label={col.label} matchIds={col.ids}
+                matches={matches} onPick={onPick} slotSources={slotSources}
+                roundIndex={roundIndex} />,
+            ];
+            if (i < lbCols.length - 1) {
+              const isMerge = lbCols[i + 1].ids.length < col.ids.length;
+              if (isMerge) {
+                items.push(<WbConnectors key={`lb-conn-${i}`} leftRoundIndex={roundIndex} numLeft={col.ids.length} />);
+                mergeLevel++;
+              } else {
+                items.push(<LbStraightConnectors key={`lb-conn-${i}`} roundIndex={roundIndex} numMatches={col.ids.length} />);
+              }
+            }
+            return items;
+          });
+        })()}
       </div>
     </div>
   );
@@ -1273,63 +1321,75 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
       </div>
 
       {/* Bracket sections */}
-      <Section title="Winners bracket" accentColor="#c9954a" colGap={0}>
-        {!allR1Real && playInIds.length > 0 && (
-          <div style={{ marginTop: wbPaddingFor(wbMainCols[0].roundIndex) }}>
-            <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
-              onPick={handlePick} slotSources={slotSources} />
-          </div>
-        )}
-        {!allR1Real && playInIds.length > 0 && (
-          <div style={{ width: 14, flexShrink: 0 }} />
-        )}
-        {wbMainCols.flatMap((col, i) => {
-          const items = [
-            <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
-              onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} />,
-          ];
-          if (i < wbMainCols.length - 1)
-            items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
-          return items;
-        })}
-      </Section>
+      {USE_UNIFIED_CANVAS ? (
+        <UnifiedBracketCanvas
+          matches={matches}
+          onPick={handlePick}
+          slotSources={slotSources}
+          wbCols={wbCols}
+          lbCols={lbCols}
+        />
+      ) : (
+        <>
+          <Section title="Winners bracket" accentColor="#c9954a" colGap={0}>
+            {!allR1Real && playInIds.length > 0 && (
+              <div style={{ marginTop: wbPaddingFor(wbMainCols[0].roundIndex) }}>
+                <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
+                  onPick={handlePick} slotSources={slotSources} />
+              </div>
+            )}
+            {!allR1Real && playInIds.length > 0 && (
+              <div style={{ width: 14, flexShrink: 0 }} />
+            )}
+            {wbMainCols.flatMap((col, i) => {
+              const items = [
+                <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
+                  onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} />,
+              ];
+              if (i < wbMainCols.length - 1)
+                items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
+              return items;
+            })}
+          </Section>
 
-      <Section title="Losers bracket" accentColor="#9b8461" colGap={0}>
-        {!allLbR1Real && lbPlayInIds.length > 0 && (
-          <div style={{ marginTop: wbPaddingFor(2) }}>
-            <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
-              onPick={handlePick} slotSources={slotSources} />
-          </div>
-        )}
-        {(() => {
-          let mergeLevel = 1;
-          return lbMainCols.flatMap((col, i) => {
-            const roundIndex = mergeLevel + 1;
-            const items = [
-              <RoundCol key={col.label} label={col.label} matchIds={col.ids}
-                matches={matches} onPick={handlePick} slotSources={slotSources}
-                roundIndex={roundIndex} />,
-            ];
-            if (i < lbMainCols.length - 1) {
-              const isMerge = lbMainCols[i + 1].ids.length < col.ids.length;
-              if (isMerge) {
-                items.push(<WbConnectors key={`lb-conn-${i}`} leftRoundIndex={roundIndex} numLeft={col.ids.length} />);
-                mergeLevel++;
-              } else {
-                items.push(<LbStraightConnectors key={`lb-conn-${i}`} roundIndex={roundIndex} numMatches={col.ids.length} />);
-              }
-            }
-            return items;
-          });
-        })()}
-      </Section>
+          <Section title="Losers bracket" accentColor="#9b8461" colGap={0}>
+            {!allLbR1Real && lbPlayInIds.length > 0 && (
+              <div style={{ marginTop: wbPaddingFor(2) }}>
+                <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
+                  onPick={handlePick} slotSources={slotSources} />
+              </div>
+            )}
+            {(() => {
+              let mergeLevel = 1;
+              return lbMainCols.flatMap((col, i) => {
+                const roundIndex = mergeLevel + 1;
+                const items = [
+                  <RoundCol key={col.label} label={col.label} matchIds={col.ids}
+                    matches={matches} onPick={handlePick} slotSources={slotSources}
+                    roundIndex={roundIndex} />,
+                ];
+                if (i < lbMainCols.length - 1) {
+                  const isMerge = lbMainCols[i + 1].ids.length < col.ids.length;
+                  if (isMerge) {
+                    items.push(<WbConnectors key={`lb-conn-${i}`} leftRoundIndex={roundIndex} numLeft={col.ids.length} />);
+                    mergeLevel++;
+                  } else {
+                    items.push(<LbStraightConnectors key={`lb-conn-${i}`} roundIndex={roundIndex} numMatches={col.ids.length} />);
+                  }
+                }
+                return items;
+              });
+            })()}
+          </Section>
 
-      <Section title="Finals" accentColor="#e0b96f">
-        <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
-        {showReset && (
-          <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
-        )}
-      </Section>
+          <Section title="Finals" accentColor="#e0b96f">
+            <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
+            {showReset && (
+              <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
+            )}
+          </Section>
+        </>
+      )}
 
       {/* Validation panel — shown after Validate Bracket is clicked */}
       {validation !== null && (
