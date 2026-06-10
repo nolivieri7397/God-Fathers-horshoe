@@ -1024,6 +1024,14 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
 
   const gridCols = templateSize >= 16 ? "repeat(8, 1fr)" : "repeat(4, 1fr)";
 
+  // Play-in display logic — purely visual, no bracket data is read or written.
+  // Filters WB R1 to only real-vs-real matches. BYE matches are hidden; those
+  // players already appear in Round 2 via the existing auto-advance logic.
+  const wbR1Ids    = wbCols[0].ids;
+  const playInIds  = wbR1Ids.filter(id => !matches[id]?.slots?.some(s => s?.isBye));
+  const allR1Real  = playInIds.length === wbR1Ids.length; // perfect power-of-2 — no change
+  const wbMainCols = allR1Real ? wbCols : wbCols.slice(1); // skip R1 col when BYEs present
+
   const goldBtn = (disabled) => ({
     fontSize: 12, padding: "5px 11px", borderRadius: 2, cursor: disabled ? "not-allowed" : "pointer",
     border: "1px solid #c9954a", background: "#120d08",
@@ -1233,12 +1241,19 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
 
       {/* Bracket sections */}
       <Section title="Winners bracket" accentColor="#c9954a" colGap={0}>
-        {wbCols.flatMap((col, i) => {
+        {!allR1Real && playInIds.length > 0 && (
+          <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
+            onPick={handlePick} slotSources={slotSources} />
+        )}
+        {!allR1Real && playInIds.length > 0 && (
+          <div style={{ width: 14, flexShrink: 0 }} />
+        )}
+        {wbMainCols.flatMap((col, i) => {
           const items = [
             <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
               onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} />,
           ];
-          if (i < wbCols.length - 1)
+          if (i < wbMainCols.length - 1)
             items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
           return items;
         })}
