@@ -46,25 +46,31 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
     setTeams(next);
   };
 
+  const mono = "ui-monospace, Consolas, monospace";
+
   return (
-    <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem", fontFamily: "var(--font-mono, monospace)" }}>
+    <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem" }}>
       <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
         style={{ display: "block", margin: "0 auto 24px", width: "90%", maxWidth: 720, height: "auto" }} />
-      {/* Back */}
-      <button onClick={onBack} style={{
-        background: "none", border: "none", color: "var(--color-text-tertiary, #888)",
-        cursor: "pointer", fontSize: 13, padding: 0, marginBottom: 20,
-      }}>← Back to tournaments</button>
 
-      <h2 style={{ margin: "0 0 4px 0", fontSize: 22, fontWeight: 600 }}>
-        {tournamentName || "New Tournament"}
-      </h2>
-      <p style={{ margin: "0 0 24px 0", fontSize: 13, color: "var(--color-text-tertiary, #888)" }}>
-        Enter players, choose a team size, then randomize.
+      <button onClick={onBack} style={{
+        background: "none", border: "none", color: "#5a4030",
+        cursor: "pointer", fontSize: 12, padding: 0, marginBottom: 20,
+        fontFamily: mono, letterSpacing: "0.08em",
+      }}>← ALL TOURNAMENTS</button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, borderBottom: "1px solid #2a1c0c", paddingBottom: 10 }}>
+        <span style={{ color: "#3a2810", fontSize: 12 }}>◆</span>
+        <span style={{ fontSize: 20, fontWeight: 600, color: "#e0b96f", fontFamily: "Georgia, serif" }}>
+          {tournamentName || "New Tournament"}
+        </span>
+      </div>
+      <p style={{ margin: "0 0 22px 0", fontSize: 11, color: "#5a4030", fontFamily: mono, letterSpacing: "0.06em" }}>
+        ENTER PLAYERS — CHOOSE TEAM SIZE — RANDOMIZE
       </p>
 
       {/* Player input */}
-      <label style={{ fontSize: 11, color: "var(--color-text-tertiary, #888)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+      <label style={{ fontSize: 9, color: "#5a4030", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: mono }}>
         Players — one per line
       </label>
       <textarea
@@ -75,27 +81,24 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
         style={{
           display: "block", width: "100%", boxSizing: "border-box",
           marginTop: 6, marginBottom: 14,
-          fontSize: 13, fontFamily: "var(--font-mono, monospace)",
-          background: "var(--color-background-secondary, #1e1e1e)",
-          border: "0.5px solid var(--color-border-secondary, #444)",
-          borderRadius: 6, color: "var(--color-text-primary, #fff)",
-          padding: "8px 10px", resize: "vertical",
+          fontSize: 13, fontFamily: mono,
+          background: "#120d08", border: "1px solid #3a2810",
+          borderRadius: 2, color: "#9b8461",
+          padding: "8px 10px", resize: "vertical", outline: "none",
         }}
       />
 
       {/* Team size */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "var(--color-text-tertiary, #888)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 9, color: "#5a4030", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: mono }}>
           Team size
         </span>
         {[1, 2, 3, 4].map(sz => (
           <button key={sz} onClick={() => { setTeamSize(sz); setTeams([]); setWarning(""); }} style={{
-            fontSize: 12, padding: "3px 12px",
-            borderRadius: 6,
-            border: teamSize === sz ? "1.5px solid #7F77DD" : "0.5px solid var(--color-border-secondary, #444)",
-            background: teamSize === sz ? "#EEEDF9" : "var(--color-background-secondary, #1e1e1e)",
-            color: teamSize === sz ? "#3B3796" : "var(--color-text-primary, #fff)",
-            fontWeight: teamSize === sz ? 600 : 400,
+            fontSize: 12, padding: "3px 12px", borderRadius: 2, fontFamily: mono,
+            border: teamSize === sz ? "1px solid #c9954a" : "1px solid #3a2810",
+            background: teamSize === sz ? "#1e140a" : "#18110b",
+            color: teamSize === sz ? "#c9954a" : "#9b8461",
             cursor: "pointer",
           }}>{sz === 1 ? "1 (individual)" : sz}</button>
         ))}
@@ -106,25 +109,26 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
         onClick={handleRandomize}
         disabled={!canRandomize}
         style={{
-          fontSize: 13, padding: "7px 18px", borderRadius: 6, border: "none",
-          background: canRandomize ? "#7F77DD" : "var(--color-border-secondary, #444)",
-          color: "#fff", cursor: canRandomize ? "pointer" : "not-allowed",
-          fontFamily: "inherit", marginBottom: 20,
-          opacity: canRandomize ? 1 : 0.5,
+          fontSize: 12, padding: "6px 18px", borderRadius: 2, fontFamily: mono,
+          border: "1px solid #c9954a", background: "#120d08",
+          color: canRandomize ? "#c9954a" : "#5a4030",
+          cursor: canRandomize ? "pointer" : "not-allowed",
+          marginBottom: 20, letterSpacing: "0.06em",
+          opacity: canRandomize ? 1 : 0.45,
         }}
-      >Randomize teams</button>
+      >RANDOMIZE TEAMS</button>
 
       {/* Warning */}
       {warning && (
-        <p style={{ fontSize: 12, color: "#D85A30", margin: "-12px 0 16px 0" }}>{warning}</p>
+        <p style={{ fontSize: 12, color: "#9b2f1f", margin: "-12px 0 16px 0", fontFamily: mono }}>{warning}</p>
       )}
 
       {/* Team preview */}
       {teams.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{
-            fontSize: 11, color: "var(--color-text-tertiary, #888)",
-            letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8,
+            fontSize: 9, color: "#3a2810", fontFamily: mono,
+            letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8,
           }}>
             {teams.length > 32 ? "Teams (first 32 will be used)" : `Teams — ${Math.min(teams.length, 32)} bracket participants`}
           </div>
@@ -132,18 +136,15 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
             {teams.slice(0, 32).map((name, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{
-                  fontSize: 11, color: "var(--color-text-tertiary, #888)",
-                  fontFamily: "var(--font-mono, monospace)", minWidth: 22, textAlign: "right",
+                  fontSize: 10, color: "#3a2810", fontFamily: mono, minWidth: 22, textAlign: "right",
                 }}>{i + 1}</span>
                 <input
                   value={name}
                   onChange={e => handleTeamNameChange(i, e.target.value)}
                   style={{
-                    flex: 1, fontSize: 13, fontFamily: "var(--font-mono, monospace)",
-                    background: "var(--color-background-secondary, #1e1e1e)",
-                    border: "0.5px solid var(--color-border-secondary, #444)",
-                    borderRadius: 4, color: "var(--color-text-primary, #fff)",
-                    padding: "4px 8px",
+                    flex: 1, fontSize: 13, fontFamily: mono,
+                    background: "#120d08", border: "1px solid #3a2810",
+                    borderRadius: 2, color: "#9b8461", padding: "4px 8px", outline: "none",
                   }}
                 />
               </div>
@@ -154,12 +155,12 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
           <button
             onClick={handleGenerate}
             style={{
-              marginTop: 18, fontSize: 14, padding: "9px 24px",
-              borderRadius: 6, border: "none",
-              background: "#1D9E75", color: "#fff",
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+              marginTop: 18, fontSize: 12, padding: "8px 24px",
+              borderRadius: 2, border: "1px solid #c9954a",
+              background: "#120d08", color: "#e0b96f",
+              cursor: "pointer", fontFamily: mono, letterSpacing: "0.1em",
             }}
-          >Generate bracket →</button>
+          >GENERATE BRACKET →</button>
         </div>
       )}
     </div>

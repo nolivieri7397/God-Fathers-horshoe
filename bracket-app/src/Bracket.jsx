@@ -499,31 +499,39 @@ function MatchCard({ match, onPick, slotSources }) {
   const ready = slots[0] !== null && slots[1] !== null;
   const done  = winner !== null;
 
+  const isFinals = match.bracket === "GF";
   return (
     <div style={{
-      width: 160,
+      width: 172,
       flexShrink: 0,
-      background: "var(--color-background-primary)",
-      border: `0.5px solid ${done ? "var(--color-border-success)" : "var(--color-border-tertiary)"}`,
-      borderRadius: "var(--border-radius-md)",
+      background: "#18110b",
+      border: `1px solid ${isFinals ? "#c9954a" : done ? "#2fa66a" : "#3a2810"}`,
+      borderRadius: 2,
       overflow: "hidden",
     }}>
       <div style={{
-        fontSize: 10,
-        color: "var(--color-text-tertiary)",
+        fontSize: 9,
+        color: "#5a4030",
         padding: "3px 8px",
-        background: "var(--color-background-secondary)",
-        borderBottom: "0.5px solid var(--color-border-tertiary)",
-        letterSpacing: "0.07em",
+        background: "#120d08",
+        borderBottom: "1px solid #2a1c0c",
+        letterSpacing: "0.12em",
         textTransform: "uppercase",
         fontFamily: "var(--font-mono)",
-      }}>{label}</div>
+        display: "flex", justifyContent: "space-between",
+      }}>
+        <span>{label}</span>
+        {done && <span style={{ color: "#2fa66a" }}>Done</span>}
+        {!done && ready && !done && <span style={{ color: "#c9954a" }}>Ready</span>}
+      </div>
 
       {[0, 1].map(i => {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
         const isLoser   = done && p?.id !== winner?.id;
         const clickable = !done && ready && p != null && !p?.isBye;
+        const isBye     = p?.isBye;
+        const isTbd     = !p;
 
         return (
           <div
@@ -531,23 +539,26 @@ function MatchCard({ match, onPick, slotSources }) {
             onClick={() => clickable && onPick(match.id, i)}
             title={clickable ? `Pick ${p.name} as winner` : undefined}
             style={{
-              padding: "7px 8px",
+              padding: "8px 10px",
               display: "flex",
               alignItems: "center",
-              gap: 5,
+              gap: 6,
               cursor: clickable ? "pointer" : "default",
-              background: isWinner ? "var(--color-background-success)" : "transparent",
-              borderBottom: i === 0 ? "0.5px solid var(--color-border-tertiary)" : "none",
-              opacity: isLoser ? 0.38 : (p?.isBye ? 0.35 : 1),
+              background: isWinner ? "#0a1810" : "transparent",
+              borderLeft: isWinner ? "3px solid #2fa66a" : "3px solid transparent",
+              borderBottom: i === 0 ? "1px solid #1e160a" : "none",
+              opacity: isLoser ? 0.28 : 1,
               userSelect: "none",
               transition: "background 0.1s",
             }}
+            onMouseEnter={e => { if (clickable) e.currentTarget.style.background = "#1e160a"; }}
+            onMouseLeave={e => { if (clickable) e.currentTarget.style.background = isWinner ? "#0a1810" : "transparent"; }}
           >
-            {isWinner && <span style={{ fontSize: 10, color: "var(--color-text-success)" }}>✓</span>}
             <span style={{
               fontSize: 12,
-              fontFamily: "var(--font-mono)",
-              color: p ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+              fontFamily: isBye || isTbd ? "var(--font-mono)" : "Georgia, serif",
+              fontStyle: isBye || isTbd ? "italic" : "normal",
+              color: isWinner ? "#2fa66a" : isBye || isTbd ? "#2a1c0c" : "#e0b96f",
               flex: 1,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -555,6 +566,7 @@ function MatchCard({ match, onPick, slotSources }) {
             }}>
               {p ? (p.isBye ? "BYE" : p.name) : (slotSources?.[match.id]?.[i] ? `← ${slotSources[match.id][i]}` : "TBD")}
             </span>
+            {isWinner && <span style={{ fontSize: 10, color: "#2fa66a" }}>✓</span>}
           </div>
         );
       })}
@@ -567,12 +579,16 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{
-        fontSize: 10,
-        color: "var(--color-text-tertiary)",
+        fontSize: 9,
+        color: "#5a4030",
         textAlign: "center",
-        letterSpacing: "0.08em",
+        letterSpacing: "0.15em",
         textTransform: "uppercase",
+        fontFamily: "var(--font-mono)",
+        borderBottom: "1px solid #1e160a",
+        paddingBottom: 5,
         marginBottom: 2,
+        width: 172,
       }}>{label}</div>
       {matchIds.map(id => (
         <MatchCard key={id} match={matches[id]} onPick={onPick} slotSources={slotSources} />
@@ -581,16 +597,20 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources }) {
   );
 }
 
-// A bracket section (WB / LB / Finals) with a coloured left-border accent.
+// A bracket section (WB / LB / Finals) with an engraved gold header.
 function Section({ title, accentColor, children }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <div style={{ width: 3, height: 16, borderRadius: 2, background: accentColor, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>{title}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, borderBottom: "1px solid #2a1c0c", paddingBottom: 8 }}>
+        <span style={{ color: "#3a2810", fontSize: 12 }}>◆</span>
+        <span style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: "0.2em",
+          textTransform: "uppercase", color: accentColor,
+          fontFamily: "Georgia, serif",
+        }}>{title}</span>
       </div>
       <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", minWidth: "max-content" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: "max-content" }}>
           {children}
         </div>
       </div>
@@ -964,6 +984,19 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
 
   const gridCols = templateSize >= 16 ? "repeat(8, 1fr)" : "repeat(4, 1fr)";
 
+  const goldBtn = (disabled) => ({
+    fontSize: 12, padding: "5px 11px", borderRadius: 2, cursor: disabled ? "not-allowed" : "pointer",
+    border: "1px solid #c9954a", background: "#120d08",
+    color: disabled ? "#5a4030" : "#c9954a",
+    fontFamily: "var(--font-mono)", letterSpacing: "0.06em",
+    opacity: disabled ? 0.45 : 1,
+  });
+  const mutedBtn = {
+    fontSize: 12, padding: "5px 11px", borderRadius: 2, cursor: "pointer",
+    border: "1px solid #3a2810", background: "#120d08",
+    color: "#5a4030", fontFamily: "var(--font-mono)", letterSpacing: "0.06em",
+  };
+
   return (
     <div ref={bracketRef} style={{ padding: "1.25rem 1rem", maxWidth: 1200, margin: "0 auto" }}>
       <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
@@ -972,193 +1005,132 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
       {onBack && (
         <button onClick={onBack} style={{
           marginBottom: 12, background: "none", border: "none",
-          color: "var(--color-text-tertiary)", cursor: "pointer", fontSize: 13, padding: 0,
-        }}>← All tournaments</button>
+          color: "#5a4030", cursor: "pointer", fontSize: 12, padding: 0,
+          fontFamily: "var(--font-mono)", letterSpacing: "0.08em",
+        }}>← ALL TOURNAMENTS</button>
       )}
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         flexWrap: "wrap", gap: 10, marginBottom: 20,
+        borderBottom: "1px solid #2a1c0c", paddingBottom: 16,
       }}>
         <div>
-          {/* Editable tournament name — always editable, even during play */}
+          {/* Editable tournament name */}
           <input
             value={tournamentName}
             onChange={e => handleTournamentNameChange(e.target.value)}
             placeholder={`Double elimination — ${playerCount} player${playerCount !== 1 ? "s" : ""}`}
             style={{
-              fontSize: 20, fontWeight: 500,
+              fontSize: 22, fontWeight: 600,
               background: "transparent",
               border: "none",
               borderBottom: "1.5px solid transparent",
               borderRadius: 0,
-              color: "var(--color-text-primary)",
+              color: "#e0b96f",
+              fontFamily: "Georgia, serif",
               padding: "0 0 2px 0",
               width: "100%",
               maxWidth: 480,
               outline: "none",
               cursor: "text",
             }}
-            onFocus={e => e.target.style.borderBottomColor = "var(--color-border-secondary)"}
+            onFocus={e => e.target.style.borderBottomColor = "#5a4030"}
             onBlur={e  => e.target.style.borderBottomColor = "transparent"}
           />
           {champion && (
-            <p style={{ color: "#1D9E75", fontSize: 13, fontWeight: 500, margin: "4px 0 0" }}>
-              🏆 {champion.name} wins the tournament!
-            </p>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              marginTop: 6, padding: "5px 14px",
+              border: "1px solid #c9954a", borderRadius: 2,
+              background: "#120d08",
+            }}>
+              <span style={{ color: "#c9954a", fontSize: 14 }}>◆</span>
+              <span style={{ color: "#e0b96f", fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", letterSpacing: "0.06em" }}>
+                {champion.name} — CHAMPION
+              </span>
+              <span style={{ color: "#c9954a", fontSize: 14 }}>◆</span>
+            </div>
           )}
-          <p style={{ color: "var(--color-text-secondary)", fontSize: 13, margin: "3px 0 0" }}>
+          <p style={{ color: "#5a4030", fontSize: 12, margin: "5px 0 0", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
             {anyResultPicked
-              ? "Click a player name in any ready match to mark them as winner"
-              : "Edit player names below, then click a match to start playing"}
+              ? "CLICK A PLAYER IN ANY READY MATCH TO MARK AS WINNER"
+              : "EDIT PLAYER NAMES BELOW — THEN CLICK A MATCH TO START"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {/* Player count tracker */}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Stats block */}
           <div style={{
-            display: "flex",
-            alignItems: "stretch",
-            border: "0.5px solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md)",
-            overflow: "hidden",
+            display: "flex", alignItems: "stretch",
+            border: "1px solid #3a2810", borderRadius: 2, overflow: "hidden",
           }}>
             {[
-              { label: "Total",      value: stats.total,      color: "var(--color-text-primary)" },
-              { label: "Active",     value: stats.active,     color: "#1D9E75"                   },
-              { label: "Eliminated", value: stats.eliminated, color: "#D85A30"                   },
+              { label: "Total",      value: stats.total,      color: "#9b8461" },
+              { label: "Active",     value: stats.active,     color: "#2fa66a" },
+              { label: "Eliminated", value: stats.eliminated, color: "#6b3020" },
             ].map(({ label, value, color }, i, arr) => (
               <div key={label} style={{
-                padding: "4px 12px",
-                background: "var(--color-background-secondary)",
-                borderRight: i < arr.length - 1 ? "0.5px solid var(--color-border-tertiary)" : "none",
+                padding: "4px 12px", background: "#120d08",
+                borderRight: i < arr.length - 1 ? "1px solid #3a2810" : "none",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
               }}>
-                <span style={{ fontSize: 16, fontWeight: 600, color, lineHeight: 1 }}>{value}</span>
-                <span style={{ fontSize: 10, color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color, lineHeight: 1, fontFamily: "Georgia, serif" }}>{value}</span>
+                <span style={{ fontSize: 9, color: "#3a2810", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>{label}</span>
               </div>
             ))}
           </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: "0.5px solid var(--color-border-secondary)",
-              background: "var(--color-background-primary)",
-              color: "var(--color-text-primary)", cursor: exporting ? "wait" : "pointer",
-              opacity: exporting ? 0.6 : 1,
-            }}
-          >{exporting ? "Exporting…" : "Export PNG"}</button>
-          <button
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: "0.5px solid var(--color-border-secondary)",
-              background: "var(--color-background-primary)",
-              color: history.length === 0 ? "var(--color-text-tertiary)" : "var(--color-text-primary)",
-              cursor: history.length === 0 ? "not-allowed" : "pointer",
-              opacity: history.length === 0 ? 0.5 : 1,
-            }}
-          >Undo last match</button>
-          <button
-            onClick={handleRestartTournament}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: "0.5px solid var(--color-border-secondary)",
-              background: "var(--color-background-primary)",
-              color: "var(--color-text-primary)", cursor: "pointer",
-            }}
-          >Reset tournament</button>
-          <button
-            onClick={handleReset}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: "0.5px solid var(--color-border-secondary)",
-              background: "var(--color-background-primary)",
-              color: "var(--color-text-tertiary)", cursor: "pointer",
-            }}
-          >Clear all</button>
-          <button
-            onClick={handleClearSaved}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: "0.5px solid var(--color-border-secondary)",
-              background: "var(--color-background-primary)",
-              color: "var(--color-text-tertiary)", cursor: "pointer",
-            }}
-          >Clear saved bracket</button>
-          <button
-            onClick={() => setShowDebug(v => !v)}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: `0.5px solid ${showDebug ? "var(--color-border-success)" : "var(--color-border-secondary)"}`,
-              background: showDebug ? "var(--color-background-success)" : "var(--color-background-primary)",
-              color: showDebug ? "var(--color-text-success)" : "var(--color-text-tertiary)",
-              cursor: "pointer",
-            }}
-          >{showDebug ? "Hide debug" : "Show debug"}</button>
-          <button
-            onClick={() => setValidation(validateBracket())}
-            style={{
-              fontSize: 13, padding: "5px 12px",
-              borderRadius: "var(--border-radius-md)",
-              border: validation === null
-                ? "0.5px solid var(--color-border-secondary)"
-                : validation.valid
-                  ? "0.5px solid var(--color-border-success)"
-                  : "0.5px solid #D85A30",
-              background: "var(--color-background-primary)",
-              color: validation === null
-                ? "var(--color-text-tertiary)"
-                : validation.valid
-                  ? "var(--color-text-success)"
-                  : "#D85A30",
-              cursor: "pointer",
-            }}
-          >Validate bracket</button>
+          <button onClick={handleExport} disabled={exporting} style={goldBtn(exporting)}>
+            {exporting ? "Exporting…" : "Export PNG"}
+          </button>
+          <button onClick={handleUndo} disabled={history.length === 0} style={goldBtn(history.length === 0)}>
+            Undo
+          </button>
+          <button onClick={handleRestartTournament} style={goldBtn(false)}>Reset</button>
+          <button onClick={handleReset} style={mutedBtn}>Clear all</button>
+          <button onClick={handleClearSaved} style={mutedBtn}>Clear saved</button>
+          <button onClick={() => setShowDebug(v => !v)} style={{
+            ...mutedBtn,
+            border: showDebug ? "1px solid #2fa66a" : "1px solid #3a2810",
+            color: showDebug ? "#2fa66a" : "#5a4030",
+            background: showDebug ? "#0a1810" : "#120d08",
+          }}>{showDebug ? "Hide debug" : "Debug"}</button>
+          <button onClick={() => setValidation(validateBracket())} style={{
+            ...mutedBtn,
+            border: validation === null ? "1px solid #3a2810" : validation.valid ? "1px solid #2fa66a" : "1px solid #9b2f1f",
+            color: validation === null ? "#5a4030" : validation.valid ? "#2fa66a" : "#c0392b",
+          }}>Validate</button>
         </div>
       </div>
 
       {/* Player count selector + name roster */}
       <div style={{
-        background: "var(--color-background-secondary)",
-        borderRadius: "var(--border-radius-md)",
-        border: "0.5px solid var(--color-border-tertiary)",
+        background: "#120d08",
+        borderRadius: 2,
+        border: "1px solid #3a2810",
         padding: "12px 16px",
         marginBottom: 24,
       }}>
         {/* Count selector — only shown before play starts */}
         {!anyResultPicked && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+            <span style={{ fontSize: 9, color: "#5a4030", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>
               Players
             </span>
-            {/* Quick-pick buttons for common bracket sizes */}
             {[4, 8, 16, 32].map(count => (
               <button
                 key={count}
                 onClick={() => handleCountChange(count)}
                 style={{
-                  fontSize: 12, padding: "3px 10px",
-                  borderRadius: "var(--border-radius-md)",
-                  border: playerCount === count
-                    ? "1.5px solid #1D9E75"
-                    : "0.5px solid var(--color-border-secondary)",
-                  background: playerCount === count ? "#E1F5EE" : "var(--color-background-primary)",
-                  color: playerCount === count ? "#085041" : "var(--color-text-primary)",
-                  fontWeight: playerCount === count ? 500 : 400,
+                  fontSize: 12, padding: "3px 10px", borderRadius: 2,
+                  border: playerCount === count ? "1px solid #c9954a" : "1px solid #3a2810",
+                  background: playerCount === count ? "#1e140a" : "#18110b",
+                  color: playerCount === count ? "#c9954a" : "#9b8461",
+                  fontFamily: "var(--font-mono)",
                   cursor: "pointer",
                 }}
               >{count}</button>
             ))}
-            <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginLeft: 4 }}>or</span>
+            <span style={{ fontSize: 9, color: "#5a4030", marginLeft: 4, fontFamily: "var(--font-mono)" }}>or</span>
             <input
               type="text"
               value={countInput}
@@ -1168,32 +1140,36 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
                 const v = parseInt(raw, 10);
                 if (!isNaN(v) && v >= 3 && v <= 32) handleCountChange(v);
               }}
-              style={{ width: 52, fontSize: 12, textAlign: "center", fontFamily: "var(--font-mono)" }}
+              style={{
+                width: 48, fontSize: 12, textAlign: "center", fontFamily: "var(--font-mono)",
+                background: "#18110b", border: "1px solid #3a2810", borderRadius: 2,
+                color: "#9b8461", padding: "2px 4px",
+              }}
             />
             {countInput !== "" && (() => { const v = parseInt(countInput, 10); return (isNaN(v) || v < 3 || v > 32); })() && (
-              <span style={{ fontSize: 11, color: "#D85A30" }}>Enter 3–32</span>
+              <span style={{ fontSize: 10, color: "#9b2f1f", fontFamily: "var(--font-mono)" }}>3–32</span>
             )}
             {templateSize !== playerCount && (
-              <span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
-                {"→"} {templateSize}-player template,{" "}
-                {templateSize - playerCount} BYE{templateSize - playerCount !== 1 ? "s" : ""}
+              <span style={{ fontSize: 10, color: "#5a4030", fontFamily: "var(--font-mono)" }}>
+                → {templateSize}-slot, {templateSize - playerCount} BYE{templateSize - playerCount !== 1 ? "s" : ""}
               </span>
             )}
           </div>
         )}
 
         <div style={{
-          fontSize: 11, color: "var(--color-text-tertiary)",
-          letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10,
+          fontSize: 9, color: "#3a2810",
+          letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10,
+          fontFamily: "var(--font-mono)",
         }}>
-          {anyResultPicked ? "Players — locked while tournament is in progress" : "Names — edit before play starts"}
+          {anyResultPicked ? "PLAYERS — LOCKED DURING TOURNAMENT" : "NAMES — EDIT BEFORE PLAY STARTS"}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 6 }}>
+        <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 5 }}>
           {names.map((name, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{
-                fontSize: 11, color: "var(--color-text-tertiary)",
+                fontSize: 10, color: "#3a2810",
                 fontFamily: "var(--font-mono)", minWidth: 18, textAlign: "right", flexShrink: 0,
               }}>{i + 1}</span>
               <input
@@ -1203,7 +1179,10 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
                 disabled={anyResultPicked}
                 style={{
                   flex: 1, fontSize: 12, fontFamily: "var(--font-mono)",
-                  opacity: anyResultPicked ? 0.55 : 1,
+                  background: "transparent", border: "none", borderBottom: "1px solid #2a1c0c",
+                  borderRadius: 0, color: "#9b8461", padding: "2px 0",
+                  outline: "none",
+                  opacity: anyResultPicked ? 0.45 : 1,
                   cursor: anyResultPicked ? "not-allowed" : "text",
                 }}
               />
@@ -1213,19 +1192,19 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
       </div>
 
       {/* Bracket sections */}
-      <Section title="Winners bracket" accentColor="#1D9E75">
+      <Section title="Winners bracket" accentColor="#c9954a">
         {wbCols.map(({ label, ids }) => (
           <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
         ))}
       </Section>
 
-      <Section title="Losers bracket" accentColor="#D85A30">
+      <Section title="Losers bracket" accentColor="#9b8461">
         {lbCols.map(({ label, ids }) => (
           <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
         ))}
       </Section>
 
-      <Section title="Finals" accentColor="#7F77DD">
+      <Section title="Finals" accentColor="#e0b96f">
         <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
         {showReset && (
           <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} />

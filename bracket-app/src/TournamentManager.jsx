@@ -81,31 +81,36 @@ export default function TournamentManager({ onOpen, onSetup }) {
   };
 
   return (
-    <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem", fontFamily: "var(--font-mono, monospace)" }}>
+    <div style={{ maxWidth: 560, margin: "3rem auto", padding: "0 1rem" }}>
       <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
         style={{ display: "block", margin: "0 auto 28px", width: "90%", maxWidth: 720, height: "auto" }} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Tournaments</h2>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, borderBottom: "1px solid #2a1c0c", paddingBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#3a2810", fontSize: 12 }}>◆</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#c9954a", fontFamily: "Georgia, serif" }}>
+            Tournaments
+          </span>
+        </div>
         <button onClick={handleCreate} style={{
-          background: "var(--color-accent, #4f8ef7)", color: "#fff",
-          border: "none", borderRadius: 6, padding: "7px 16px",
-          fontSize: 14, cursor: "pointer", fontFamily: "inherit",
-        }}>+ New tournament</button>
+          fontSize: 12, padding: "5px 14px", borderRadius: 2, cursor: "pointer",
+          border: "1px solid #c9954a", background: "#120d08", color: "#c9954a",
+          fontFamily: "ui-monospace, Consolas, monospace", letterSpacing: "0.06em",
+        }}>+ NEW TOURNAMENT</button>
       </div>
 
       {index.length === 0 && (
-        <p style={{ color: "var(--color-text-tertiary, #888)", fontSize: 14 }}>
+        <p style={{ color: "#3a2810", fontSize: 13, fontFamily: "ui-monospace, Consolas, monospace" }}>
           No tournaments yet. Create one above.
         </p>
       )}
 
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         {index.map(entry => (
           <li key={entry.id} style={{
             display: "flex", alignItems: "center", gap: 8,
-            background: "var(--color-surface, #1e1e1e)",
-            border: "1px solid var(--color-border, #333)",
-            borderRadius: 8, padding: "10px 14px",
+            background: "#18110b", border: "1px solid #3a2810",
+            borderRadius: 2, padding: "10px 14px",
           }}>
             {editingId === entry.id ? (
               <input
@@ -115,23 +120,23 @@ export default function TournamentManager({ onOpen, onSetup }) {
                 onBlur={() => commitRename(entry.id)}
                 onKeyDown={e => { if (e.key === "Enter") commitRename(entry.id); if (e.key === "Escape") setEditingId(null); }}
                 style={{
-                  flex: 1, fontSize: 15, background: "transparent",
-                  border: "none", borderBottom: "1px solid var(--color-accent, #4f8ef7)",
-                  color: "var(--color-text-primary, #fff)", outline: "none",
-                  fontFamily: "inherit", padding: "0 0 2px 0",
+                  flex: 1, fontSize: 14, background: "transparent",
+                  border: "none", borderBottom: "1px solid #c9954a",
+                  color: "#e0b96f", outline: "none",
+                  fontFamily: "Georgia, serif", padding: "0 0 2px 0",
                 }}
               />
             ) : (
               <span
                 onClick={() => handleOpen(entry)}
-                style={{ flex: 1, fontSize: 15, cursor: "pointer", color: "var(--color-text-primary, #fff)" }}
+                style={{ flex: 1, fontSize: 14, cursor: "pointer", color: "#e0b96f", fontFamily: "Georgia, serif" }}
               >
                 {entry.name}
               </span>
             )}
             <button onClick={() => startRename(entry)} title="Rename" style={ghostBtn}>✎</button>
-            <button onClick={() => handleOpen(entry)} title="Open" style={ghostBtn}>Open</button>
-            <button onClick={() => handleDelete(entry)} title="Delete" style={{ ...ghostBtn, color: "#c0392b" }}>✕</button>
+            <button onClick={() => handleOpen(entry)} title="Open" style={{ ...ghostBtn, color: "#c9954a", border: "1px solid #3a2810" }}>Open</button>
+            <button onClick={() => handleDelete(entry)} title="Delete" style={{ ...ghostBtn, color: "#6b3020" }}>✕</button>
           </li>
         ))}
       </ul>
@@ -141,6 +146,6 @@ export default function TournamentManager({ onOpen, onSetup }) {
 
 const ghostBtn = {
   background: "none", border: "none", cursor: "pointer",
-  color: "var(--color-text-tertiary, #888)", fontSize: 13,
-  padding: "2px 6px", fontFamily: "inherit",
+  color: "#5a4030", fontSize: 13,
+  padding: "2px 6px", fontFamily: "ui-monospace, Consolas, monospace",
 };
