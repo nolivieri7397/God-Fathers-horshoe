@@ -499,16 +499,8 @@ function MatchCard({ match, onPick, slotSources }) {
   const ready = slots[0] !== null && slots[1] !== null;
   const done  = winner !== null;
 
-  const isFinals = match.bracket === "GF";
   return (
-    <div style={{
-      width: 128,
-      flexShrink: 0,
-      background: "#18110b",
-      border: `1px solid ${isFinals ? "#c9954a" : done ? "#2fa66a" : "#2a1c0c"}`,
-      borderRadius: 1,
-      overflow: "hidden",
-    }}>
+    <div style={{ width: 128, flexShrink: 0 }}>
       {[0, 1].map(i => {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
@@ -517,40 +509,48 @@ function MatchCard({ match, onPick, slotSources }) {
         const isBye     = p?.isBye;
         const isTbd     = !p;
 
+        const nameColor = isWinner ? "#2fa66a"
+                        : isLoser  ? "#2a1c0c"
+                        : isBye    ? "#3a2810"
+                        : isTbd    ? "#2a1c0c"
+                        : clickable ? "#e0b96f"
+                        : "#9b8461";
+
+        const displayName = p
+          ? (p.isBye ? "BYE" : p.name)
+          : (slotSources?.[match.id]?.[i] ? `← ${slotSources[match.id][i]}` : "—");
+
         return (
           <div
             key={i}
             onClick={() => clickable && onPick(match.id, i)}
             title={clickable ? `Pick ${p.name} as winner` : undefined}
             style={{
-              padding: "4px 7px",
               display: "flex",
               alignItems: "center",
-              gap: 5,
+              gap: 4,
+              padding: "3px 0",
+              borderBottom: "1px solid #2a1c0c",
               cursor: clickable ? "pointer" : "default",
-              background: isWinner ? "#0a1810" : "transparent",
-              borderLeft: isWinner ? "2px solid #2fa66a" : "2px solid transparent",
-              borderBottom: i === 0 ? "1px solid #1e160a" : "none",
-              opacity: isLoser ? 0.28 : 1,
               userSelect: "none",
-              transition: "background 0.1s",
             }}
-            onMouseEnter={e => { if (clickable) e.currentTarget.style.background = "#1e160a"; }}
-            onMouseLeave={e => { if (clickable) e.currentTarget.style.background = isWinner ? "#0a1810" : "transparent"; }}
+            onMouseEnter={e => { if (clickable) e.currentTarget.querySelector("span").style.color = "#c9954a"; }}
+            onMouseLeave={e => { if (clickable) e.currentTarget.querySelector("span").style.color = nameColor; }}
           >
             <span style={{
               fontSize: 11,
               fontFamily: isBye || isTbd ? "var(--font-mono)" : "Georgia, serif",
               fontStyle: isBye || isTbd ? "italic" : "normal",
-              color: isWinner ? "#2fa66a" : isBye || isTbd ? "#2a1c0c" : "#e0b96f",
+              color: nameColor,
               flex: 1,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              opacity: isLoser ? 0.35 : 1,
             }}>
-              {p ? (p.isBye ? "BYE" : p.name) : (slotSources?.[match.id]?.[i] ? `← ${slotSources[match.id][i]}` : "TBD")}
+              {displayName}
             </span>
-            {isWinner && <span style={{ fontSize: 9, color: "#2fa66a" }}>✓</span>}
+            {isWinner && <span style={{ fontSize: 9, color: "#2fa66a", flexShrink: 0 }}>✓</span>}
           </div>
         );
       })}
