@@ -365,7 +365,11 @@ function autoAdvanceByes(matches) {
       const s0bye = !!s0?.isBye;
       const s1bye = !!s1?.isBye;
       if (!s0bye && !s1bye) continue; // no explicit BYE present — wait
-      if (s0bye && s1bye) continue;   // both BYE — no real player to advance
+      if (s0bye && s1bye) {
+        result = pickWinner(result, m.id, 0); // propagate BYE forward to unblock downstream
+        changed = true;
+        break;
+      }
       const winnerSlot = !s0bye ? 0 : 1;
       if (!m.slots[winnerSlot] || m.slots[winnerSlot].isBye) continue;
       result = pickWinner(result, m.id, winnerSlot);
@@ -498,7 +502,7 @@ function MatchCard({ match, onPick }) {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
         const isLoser   = done && p?.id !== winner?.id;
-        const clickable = !done && ready && p !== null && !p.isBye;
+        const clickable = !done && ready && p != null && !p?.isBye;
 
         return (
           <div
