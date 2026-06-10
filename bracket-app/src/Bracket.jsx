@@ -470,10 +470,30 @@ function getStats(matches, total) {
 }
 
 // ---------------------------------------------------------------------------
+// Debug helper — reverse-maps winnerTo/loserTo so TBD slots can say where
+// their player is supposed to come from. Used only for display; no logic impact.
+// ---------------------------------------------------------------------------
+
+function buildSlotSources(matches) {
+  const sources = {};
+  Object.values(matches).forEach(m => {
+    if (m.winnerTo) {
+      if (!sources[m.winnerTo.id]) sources[m.winnerTo.id] = {};
+      sources[m.winnerTo.id][m.winnerTo.slot] = `winner of ${m.id}`;
+    }
+    if (m.loserTo) {
+      if (!sources[m.loserTo.id]) sources[m.loserTo.id] = {};
+      sources[m.loserTo.id][m.loserTo.slot] = `loser of ${m.id}`;
+    }
+  });
+  return sources;
+}
+
+// ---------------------------------------------------------------------------
 // UI components
 // ---------------------------------------------------------------------------
 
-function MatchCard({ match, onPick }) {
+function MatchCard({ match, onPick, slotSources }) {
   const { slots, winner, label } = match;
   const ready = slots[0] !== null && slots[1] !== null;
   const done  = winner !== null;
@@ -532,7 +552,7 @@ function MatchCard({ match, onPick }) {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}>
-              {p ? (p.isBye ? "BYE" : p.name) : "TBD"}
+              {p ? (p.isBye ? "BYE" : p.name) : (slotSources?.[match.id]?.[i] ? `← ${slotSources[match.id][i]}` : "TBD")}
             </span>
           </div>
         );
@@ -542,7 +562,7 @@ function MatchCard({ match, onPick }) {
 }
 
 // A vertical stack of MatchCards under a round label.
-function RoundCol({ label, matchIds, matches, onPick }) {
+function RoundCol({ label, matchIds, matches, onPick, slotSources }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{
@@ -554,7 +574,7 @@ function RoundCol({ label, matchIds, matches, onPick }) {
         marginBottom: 2,
       }}>{label}</div>
       {matchIds.map(id => (
-        <MatchCard key={id} match={matches[id]} onPick={onPick} />
+        <MatchCard key={id} match={matches[id]} onPick={onPick} slotSources={slotSources} />
       ))}
     </div>
   );
@@ -589,6 +609,7 @@ export default function App() {
   const [exporting,   setExporting]   = useState(false);
   const [tournamentName, setTournamentName] = useState("");
   const [showDebug,    setShowDebug]    = useState(false);
+  const [countInput,   setCountInput]   = useState("8");
   const [validation,   setValidation]   = useState(null); // null = not run yet
   const [humanPickMade, setHumanPickMade] = useState(false);
 
@@ -801,6 +822,7 @@ export default function App() {
     const clamped      = Math.max(3, Math.min(32, count));
     const defaultNames = Array.from({ length: clamped }, (_, i) => `Player ${i + 1}`);
     setPlayerCount(clamped);
+    setCountInput(String(clamped));
     setNames(defaultNames);
     setHistory([]);
     applyNames(defaultNames, clamped);
@@ -869,8 +891,9 @@ export default function App() {
 
   // -- Bracket screen --------------------------------------------------------
 
-  const champion  = getChampion(matches);
-  const stats     = getStats(matches, playerCount);
+  const champion    = getChampion(matches);
+  const stats       = getStats(matches, playerCount);
+  const slotSources = buildSlotSources(matches);
   const gf1       = matches["GF-1"];
   const showReset = gf1.winner !== null && gf1.winner.id === gf1.slots[1]?.id;
 
@@ -1112,11 +1135,19 @@ export default function App() {
             ))}
             <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginLeft: 4 }}>or</span>
             <input
-              type="number" min={3} max={32}
-              value={playerCount}
-              onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) handleCountChange(v); }}
+              type="text"
+              value={countInput}
+              onChange={e => {
+                const raw = e.target.value;
+                setCountInput(raw);
+                const v = parseInt(raw, 10);
+                if (!isNaN(v) && v >= 3 && v <= 32) handleCountChange(v);
+              }}
               style={{ width: 52, fontSize: 12, textAlign: "center", fontFamily: "var(--font-mono)" }}
             />
+            {countInput !== "" && (() => { const v = parseInt(countInput, 10); return (isNaN(v) || v < 3 || v > 32); })() && (
+              <span style={{ fontSize: 11, color: "#D85A30" }}>Enter 3–32</span>
+            )}
             {templateSize !== playerCount && (
               <span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
                 {"→"} {templateSize}-player template,{" "}
@@ -1159,20 +1190,20 @@ export default function App() {
       {/* Bracket sections */}
       <Section title="Winners bracket" accentColor="#1D9E75">
         {wbCols.map(({ label, ids }) => (
-          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} />
+          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
         ))}
       </Section>
 
       <Section title="Losers bracket" accentColor="#D85A30">
         {lbCols.map(({ label, ids }) => (
-          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} />
+          <RoundCol key={label} label={label} matchIds={ids} matches={matches} onPick={handlePick} slotSources={slotSources} />
         ))}
       </Section>
 
       <Section title="Finals" accentColor="#7F77DD">
-        <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} />
+        <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
         {showReset && (
-          <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} />
+          <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
         )}
       </Section>
 
