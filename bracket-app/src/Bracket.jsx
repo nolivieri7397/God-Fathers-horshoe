@@ -637,6 +637,24 @@ function WbConnectors({ leftRoundIndex, numLeft }) {
   );
 }
 
+// Straight connector strip for 1:1 LB transitions — one horizontal line per match pair.
+function LbStraightConnectors({ roundIndex, numMatches }) {
+  const pt  = wbPaddingFor(roundIndex);
+  const gap = wbGapFor(roundIndex);
+  const svgH = LABEL_H + pt + numMatches * CARD_H + Math.max(0, numMatches - 1) * gap + 10;
+  const lines = [];
+  for (let i = 0; i < numMatches; i++) {
+    const y = LABEL_H + pt + i * (CARD_H + gap) + CARD_H / 2;
+    lines.push(<line key={i} x1={0} y1={y} x2={CONN_W} y2={y} />);
+  }
+  return (
+    <svg width={CONN_W} height={svgH}
+      style={{ flexShrink: 0, display: "block", overflow: "visible", alignSelf: "flex-start" }}>
+      <g stroke="#8a6840" strokeWidth={1.5} fill="none">{lines}</g>
+    </svg>
+  );
+}
+
 // A bracket section (WB / LB / Finals) with an engraved gold header.
 function Section({ title, accentColor, children, colGap = 14 }) {
   return (
@@ -1265,15 +1283,32 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
         })}
       </Section>
 
-      <Section title="Losers bracket" accentColor="#9b8461">
+      <Section title="Losers bracket" accentColor="#9b8461" colGap={0}>
         {!allLbR1Real && lbPlayInIds.length > 0 && (
           <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
             onPick={handlePick} slotSources={slotSources} />
         )}
-        {lbMainCols.map(({ label, ids }) => (
-          <RoundCol key={label} label={label} matchIds={ids} matches={matches}
-            onPick={handlePick} slotSources={slotSources} />
-        ))}
+        {(() => {
+          let mergeLevel = 0;
+          return lbMainCols.flatMap((col, i) => {
+            const roundIndex = mergeLevel + 1;
+            const items = [
+              <RoundCol key={col.label} label={col.label} matchIds={col.ids}
+                matches={matches} onPick={handlePick} slotSources={slotSources}
+                roundIndex={roundIndex} />,
+            ];
+            if (i < lbMainCols.length - 1) {
+              const isMerge = lbMainCols[i + 1].ids.length < col.ids.length;
+              if (isMerge) {
+                items.push(<WbConnectors key={`lb-conn-${i}`} leftRoundIndex={roundIndex} numLeft={col.ids.length} />);
+                mergeLevel++;
+              } else {
+                items.push(<LbStraightConnectors key={`lb-conn-${i}`} roundIndex={roundIndex} numMatches={col.ids.length} />);
+              }
+            }
+            return items;
+          });
+        })()}
       </Section>
 
       <Section title="Finals" accentColor="#e0b96f">
