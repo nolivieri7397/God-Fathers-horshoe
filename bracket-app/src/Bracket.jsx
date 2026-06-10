@@ -518,7 +518,7 @@ function MatchCard({ match, onPick, slotSources }) {
   const done  = winner !== null;
 
   return (
-    <div style={{ width: 128, flexShrink: 0 }}>
+    <div style={{ width: 128, flexShrink: 0, borderRight: "1px solid #5a4030" }}>
       {[0, 1].map(i => {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
