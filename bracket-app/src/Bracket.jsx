@@ -502,29 +502,13 @@ function MatchCard({ match, onPick, slotSources }) {
   const isFinals = match.bracket === "GF";
   return (
     <div style={{
-      width: 172,
+      width: 128,
       flexShrink: 0,
       background: "#18110b",
-      border: `1px solid ${isFinals ? "#c9954a" : done ? "#2fa66a" : "#3a2810"}`,
-      borderRadius: 2,
+      border: `1px solid ${isFinals ? "#c9954a" : done ? "#2fa66a" : "#2a1c0c"}`,
+      borderRadius: 1,
       overflow: "hidden",
     }}>
-      <div style={{
-        fontSize: 9,
-        color: "#5a4030",
-        padding: "3px 8px",
-        background: "#120d08",
-        borderBottom: "1px solid #2a1c0c",
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "var(--font-mono)",
-        display: "flex", justifyContent: "space-between",
-      }}>
-        <span>{label}</span>
-        {done && <span style={{ color: "#2fa66a" }}>Done</span>}
-        {!done && ready && !done && <span style={{ color: "#c9954a" }}>Ready</span>}
-      </div>
-
       {[0, 1].map(i => {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
@@ -539,13 +523,13 @@ function MatchCard({ match, onPick, slotSources }) {
             onClick={() => clickable && onPick(match.id, i)}
             title={clickable ? `Pick ${p.name} as winner` : undefined}
             style={{
-              padding: "8px 10px",
+              padding: "4px 7px",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 5,
               cursor: clickable ? "pointer" : "default",
               background: isWinner ? "#0a1810" : "transparent",
-              borderLeft: isWinner ? "3px solid #2fa66a" : "3px solid transparent",
+              borderLeft: isWinner ? "2px solid #2fa66a" : "2px solid transparent",
               borderBottom: i === 0 ? "1px solid #1e160a" : "none",
               opacity: isLoser ? 0.28 : 1,
               userSelect: "none",
@@ -555,7 +539,7 @@ function MatchCard({ match, onPick, slotSources }) {
             onMouseLeave={e => { if (clickable) e.currentTarget.style.background = isWinner ? "#0a1810" : "transparent"; }}
           >
             <span style={{
-              fontSize: 12,
+              fontSize: 11,
               fontFamily: isBye || isTbd ? "var(--font-mono)" : "Georgia, serif",
               fontStyle: isBye || isTbd ? "italic" : "normal",
               color: isWinner ? "#2fa66a" : isBye || isTbd ? "#2a1c0c" : "#e0b96f",
@@ -566,7 +550,7 @@ function MatchCard({ match, onPick, slotSources }) {
             }}>
               {p ? (p.isBye ? "BYE" : p.name) : (slotSources?.[match.id]?.[i] ? `← ${slotSources[match.id][i]}` : "TBD")}
             </span>
-            {isWinner && <span style={{ fontSize: 10, color: "#2fa66a" }}>✓</span>}
+            {isWinner && <span style={{ fontSize: 9, color: "#2fa66a" }}>✓</span>}
           </div>
         );
       })}
@@ -588,7 +572,7 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources }) {
         borderBottom: "1px solid #1e160a",
         paddingBottom: 5,
         marginBottom: 2,
-        width: 172,
+        width: 128,
       }}>{label}</div>
       {matchIds.map(id => (
         <MatchCard key={id} match={matches[id]} onPick={onPick} slotSources={slotSources} />
