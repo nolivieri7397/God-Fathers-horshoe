@@ -680,7 +680,7 @@ function Section({ title, accentColor, children, colGap = 14 }) {
 // App
 // ---------------------------------------------------------------------------
 
-export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, initialPlayerCount }) {
+export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, initialNames, initialPlayerCount }) {
   const [playerCount, setPlayerCount] = useState(8);
   const [names,       setNames]       = useState([...DEFAULT_NAMES_8]);
   const [matches,     setMatches]     = useState(null);
@@ -1073,14 +1073,23 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
     <div ref={bracketRef} style={{ padding: "1.25rem 1rem", maxWidth: 1200, margin: "0 auto" }}>
       <img src="/godfathers-logo.png" alt="Godfathers Horseshoe Tournament"
         style={{ display: "block", margin: "0 auto 20px", width: "90%", maxWidth: 720, height: "auto" }} />
-      {/* Back to tournament list */}
-      {onBack && (
-        <button onClick={onBack} style={{
-          marginBottom: 12, background: "none", border: "none",
-          color: "#5a4030", cursor: "pointer", fontSize: 12, padding: 0,
-          fontFamily: "var(--font-mono)", letterSpacing: "0.08em",
-        }}>← ALL TOURNAMENTS</button>
-      )}
+      {/* Back navigation */}
+      <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
+        {onBack && (
+          <button onClick={onBack} style={{
+            background: "none", border: "none",
+            color: "#5a4030", cursor: "pointer", fontSize: 12, padding: 0,
+            fontFamily: "var(--font-mono)", letterSpacing: "0.08em",
+          }}>← ALL TOURNAMENTS</button>
+        )}
+        {onBackToSetup && !anyResultPicked && (
+          <button onClick={() => onBackToSetup(names, playerCount)} style={{
+            background: "none", border: "none",
+            color: "#5a4030", cursor: "pointer", fontSize: 12, padding: 0,
+            fontFamily: "var(--font-mono)", letterSpacing: "0.08em",
+          }}>← EDIT SETUP</button>
+        )}
+      </div>
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -1266,8 +1275,10 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
       {/* Bracket sections */}
       <Section title="Winners bracket" accentColor="#c9954a" colGap={0}>
         {!allR1Real && playInIds.length > 0 && (
-          <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
-            onPick={handlePick} slotSources={slotSources} />
+          <div style={{ marginTop: wbPaddingFor(wbMainCols[0].roundIndex) }}>
+            <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
+              onPick={handlePick} slotSources={slotSources} />
+          </div>
         )}
         {!allR1Real && playInIds.length > 0 && (
           <div style={{ width: 14, flexShrink: 0 }} />
@@ -1285,11 +1296,13 @@ export default function App({ storageKey = STORAGE_KEY, onBack, initialNames, in
 
       <Section title="Losers bracket" accentColor="#9b8461" colGap={0}>
         {!allLbR1Real && lbPlayInIds.length > 0 && (
-          <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
-            onPick={handlePick} slotSources={slotSources} />
+          <div style={{ marginTop: wbPaddingFor(2) }}>
+            <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
+              onPick={handlePick} slotSources={slotSources} />
+          </div>
         )}
         {(() => {
-          let mergeLevel = 0;
+          let mergeLevel = 1;
           return lbMainCols.flatMap((col, i) => {
             const roundIndex = mergeLevel + 1;
             const items = [

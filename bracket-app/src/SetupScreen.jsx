@@ -17,10 +17,10 @@ function chunkIntoTeams(players, size) {
   return teams;
 }
 
-export default function SetupScreen({ tournamentName, onGenerate, onBack }) {
+export default function SetupScreen({ tournamentName, onGenerate, onBack, initialTeams }) {
   const [playerInput, setPlayerInput] = useState("");
   const [teamSize,    setTeamSize]    = useState(1);
-  const [teams,       setTeams]       = useState([]);
+  const [teams,       setTeams]       = useState(initialTeams || []);
   const [warning,     setWarning]     = useState("");
 
   const individuals = playerInput.split("\n").map(s => s.trim()).filter(Boolean);

@@ -44,12 +44,18 @@ function App() {
     setPhase("list");
   };
 
+  const handleBackToSetup = (names, playerCount) => {
+    setActiveTournament(prev => ({ ...prev, initialNames: names, initialPlayerCount: playerCount }));
+    setPhase("setup");
+  };
+
   if (phase === "setup" && activeTournament) {
     return (
       <SetupScreen
         tournamentName={activeTournament.name}
         onGenerate={handleGenerate}
         onBack={handleBack}
+        initialTeams={activeTournament.initialNames}
       />
     );
   }
@@ -61,6 +67,7 @@ function App() {
         initialNames={activeTournament.initialNames}
         initialPlayerCount={activeTournament.initialPlayerCount}
         onBack={handleBack}
+        onBackToSetup={handleBackToSetup}
       />
     );
   }
