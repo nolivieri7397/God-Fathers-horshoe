@@ -517,14 +517,49 @@ function wbPaddingFor(r) { return (Math.pow(2, r - 1) - 1) * SLOT_H / 2; }
 // UI components
 // ---------------------------------------------------------------------------
 
-function MatchCard({ match, onPick, slotSources, scores, onScoreChange }) {
+function MatchCard({ match, onPick, slotSources, scores, onScoreChange, pitNumber, onPitChange }) {
   const { slots, winner, label } = match;
   const ready = slots[0] !== null && slots[1] !== null;
   const done  = winner !== null;
   const matchScores = scores?.[match.id] ?? {};
+  const showPitInput  = ready && !done;
+  const showPitBadge  = done && !!pitNumber;
 
   return (
     <div style={{ width: 128, flexShrink: 0, borderRight: "1px solid #5a4030", borderLeft: "1px solid #5a4030" }}>
+      {(showPitBadge || showPitInput) && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "2px 4px", borderBottom: "1px solid #2a1c0c",
+          background: "#0e0904",
+        }}>
+          <span style={{ fontSize: 9, color: "#7a5840", fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            Pit
+          </span>
+          {showPitBadge && (
+            <span style={{ fontSize: 10, color: "#c9954a", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+              {pitNumber}
+            </span>
+          )}
+          {showPitInput && (
+            <input
+              type="text"
+              inputMode="numeric"
+              value={pitNumber ?? ""}
+              placeholder="—"
+              onClick={e => e.stopPropagation()}
+              onChange={e => onPitChange?.(match.id, e.target.value)}
+              style={{
+                width: 28, fontSize: 10, textAlign: "center",
+                background: "transparent", border: "none",
+                borderBottom: "1px solid #3a2810", borderRadius: 0,
+                color: "#c9954a", fontFamily: "var(--font-mono)",
+                padding: "0 2px", outline: "none", flexShrink: 0,
+              }}
+            />
+          )}
+        </div>
+      )}
       {[0, 1].map(i => {
         const p         = slots[i];
         const isWinner  = done && p?.id === winner?.id;
@@ -609,7 +644,7 @@ function MatchCard({ match, onPick, slotSources, scores, onScoreChange }) {
 
 // A vertical stack of MatchCards under a round label.
 // roundIndex (1-based) drives WB centering math; omit for LB/Finals (flat layout).
-function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex, scores, onScoreChange }) {
+function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex, scores, onScoreChange, pits, onPitChange }) {
   const gap = roundIndex != null ? wbGapFor(roundIndex)    : BASE_GAP;
   const pt  = roundIndex != null ? wbPaddingFor(roundIndex) : 0;
   return (
@@ -625,7 +660,7 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex, s
         {matchIds.map((id, i) => (
           <div key={id}>
             {i > 0 && <div style={{ height: gap }} />}
-            <MatchCard match={matches[id]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} />
+            <MatchCard match={matches[id]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} pitNumber={pits?.[id]} onPitChange={onPitChange} />
           </div>
         ))}
       </div>
@@ -903,7 +938,7 @@ function unifiedEdgePath(edge, nodeById) {
 }
 
 // Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
-function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize, scores, onScoreChange }) {
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize, scores, onScoreChange, pits, onPitChange }) {
   const layout = buildUnifiedLayout(wbCols, lbCols);
   const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
   const useSlotEdges = templateSize === 8;
@@ -940,7 +975,7 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, te
             key={node.matchId}
             style={{ position: "absolute", left: node.x, top: node.y, width: COL_W, zIndex: 1 }}
           >
-            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} />
+            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} pitNumber={pits?.[node.matchId]} onPitChange={onPitChange} />
           </div>
         ))}
       </div>
@@ -964,9 +999,11 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   const [validation,   setValidation]   = useState(null); // null = not run yet
   const [humanPickMade, setHumanPickMade] = useState(false);
   const [scores,       setScores]       = useState({});
+  const [pits,         setPits]         = useState({});
 
-  // Mirror of scores for reading inside persist without stale closure.
+  // Mirrors for reading inside persist without stale closures.
   const scoresRef = useRef({});
+  const pitsRef   = useRef({});
 
   // Ref attached to the bracket wrapper div — html2canvas uses it as the target.
   const bracketRef = useRef(null);
@@ -1123,7 +1160,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        const { matches: m, names: n, playerCount: pc, tournamentName: tn = "", humanPickMade: hpm = false, scores: sc = {} } = JSON.parse(saved);
+        const { matches: m, names: n, playerCount: pc, tournamentName: tn = "", humanPickMade: hpm = false, scores: sc = {}, pits: pt = {} } = JSON.parse(saved);
         setMatches(m);
         setNames(n);
         setPlayerCount(pc);
@@ -1132,6 +1169,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
         setHumanPickMade(hpm);
         setScores(sc);
         scoresRef.current = sc;
+        setPits(pt);
+        pitsRef.current = pt;
         return;
       }
     } catch (e) {}
@@ -1158,7 +1197,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   // tournamentName is read directly from state — no need to pass it as an arg
   // since it's only updated via its own handler which persists immediately.
   const persist = (m, n, pc, hpm = humanPickMade) => {
-    try { localStorage.setItem(storageKey, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm, scores: scoresRef.current })); } catch (e) {}
+    try { localStorage.setItem(storageKey, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm, scores: scoresRef.current, pits: pitsRef.current })); } catch (e) {}
   };
 
   // Updates the tournament name and saves it to localStorage straight away.
@@ -1223,6 +1262,20 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     });
   };
 
+  const handlePitChange = (matchId, value) => {
+    setPits(prev => {
+      const trimmed = value.trim();
+      const next = trimmed ? { ...prev, [matchId]: trimmed } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== matchId));
+      pitsRef.current = next;
+      try {
+        const saved = localStorage.getItem(storageKey);
+        const base  = saved ? JSON.parse(saved) : {};
+        localStorage.setItem(storageKey, JSON.stringify({ ...base, pits: next }));
+      } catch (e) {}
+      return next;
+    });
+  };
+
   const handlePick = (matchId, slotIndex) => {
     setHumanPickMade(true);
     setMatches(prev => {
@@ -1254,6 +1307,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     setHistory([]);
     setScores({});
     scoresRef.current = {};
+    setPits({});
+    pitsRef.current = {};
     applyNames(names, playerCount, false);
   };
 
@@ -1265,6 +1320,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     setHistory([]);
     setScores({});
     scoresRef.current = {};
+    setPits({});
+    pitsRef.current = {};
     setNames(defaultNames);
     applyNames(defaultNames, playerCount, false);
   };
@@ -1578,6 +1635,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           templateSize={templateSize}
           scores={scores}
           onScoreChange={handleScoreChange}
+          pits={pits}
+          onPitChange={handlePitChange}
         />
       ) : (
         <>
@@ -1585,7 +1644,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {!allR1Real && playInIds.length > 0 && (
               <div style={{ marginTop: wbPaddingFor(wbMainCols[0].roundIndex) }}>
                 <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
+                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />
               </div>
             )}
             {!allR1Real && playInIds.length > 0 && (
@@ -1594,7 +1653,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {wbMainCols.flatMap((col, i) => {
               const items = [
                 <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} scores={scores} onScoreChange={handleScoreChange} />,
+                  onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />,
               ];
               if (i < wbMainCols.length - 1)
                 items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
@@ -1606,7 +1665,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {!allLbR1Real && lbPlayInIds.length > 0 && (
               <div style={{ marginTop: wbPaddingFor(2) }}>
                 <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
+                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />
               </div>
             )}
             {(() => {
@@ -1616,7 +1675,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
                 const items = [
                   <RoundCol key={col.label} label={col.label} matchIds={col.ids}
                     matches={matches} onPick={handlePick} slotSources={slotSources}
-                    roundIndex={roundIndex} scores={scores} onScoreChange={handleScoreChange} />,
+                    roundIndex={roundIndex} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />,
                 ];
                 if (i < lbMainCols.length - 1) {
                   const isMerge = lbMainCols[i + 1].ids.length < col.ids.length;
@@ -1633,9 +1692,9 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           </Section>
 
           <Section title="Finals" accentColor="#e0b96f">
-            <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
+            <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />
             {showReset && (
-              <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
+              <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} pits={pits} onPitChange={handlePitChange} />
             )}
           </Section>
         </>
