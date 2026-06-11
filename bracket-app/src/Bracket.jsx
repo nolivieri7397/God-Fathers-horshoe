@@ -827,12 +827,68 @@ function unifiedConnectorLines(conn) {
   return lines;
 }
 
+// --- Phase 2A-slot: graph-driven, slot-accurate connector endpoints (display only) ---
+
+const SLOT_ROW_H = CARD_H / 2;
+
+function unifiedSlotCenterY(nodeY, slotIndex) {
+  return nodeY + slotIndex * SLOT_ROW_H + SLOT_ROW_H / 2;
+}
+
+function unifiedSourceOutPoint(node) {
+  return { x: node.x + COL_W, y: node.y + CARD_H / 2 };
+}
+
+function unifiedDestInPoint(node, slotIndex) {
+  return { x: node.x, y: unifiedSlotCenterY(node.y, slotIndex) };
+}
+
+// winnerTo edges only; skips missing nodes, non-adjacent columns, and Finals (GF-*).
+function buildUnifiedDisplayEdges(matches, nodeById) {
+  const edges = [];
+  Object.values(matches).forEach(m => {
+    if (!m.winnerTo) return;
+    const src = nodeById[m.id];
+    const dst = nodeById[m.winnerTo.id];
+    if (!src || !dst) return;
+    if (dst.col !== src.col + 1) return;
+    edges.push({
+      kind: "winner",
+      sourceId: m.id,
+      destId: m.winnerTo.id,
+      destSlot: m.winnerTo.slot,
+    });
+  });
+  return edges;
+}
+
+// 3-segment elbow: source out → gap midpoint → dest slot in.
+function unifiedEdgePath(edge, nodeById) {
+  const src = nodeById[edge.sourceId];
+  const dst = nodeById[edge.destId];
+  const out = unifiedSourceOutPoint(src);
+  const inn = unifiedDestInPoint(dst, edge.destSlot);
+  const midX = src.x + COL_W + CONN_W / 2;
+  return [
+    { x1: out.x, y1: out.y, x2: midX, y2: out.y },
+    { x1: midX, y1: out.y, x2: midX, y2: inn.y },
+    { x1: midX, y1: inn.y, x2: inn.x, y2: inn.y },
+  ];
+}
+
 // Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
-function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols }) {
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize }) {
   const layout = buildUnifiedLayout(wbCols, lbCols);
-  const allLines = layout.connectors.flatMap((conn, i) =>
-    unifiedConnectorLines(conn).map((line, j) => ({ ...line, key: `${i}-${j}` }))
-  );
+  const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
+  const useSlotEdges = templateSize === 8;
+
+  const allLines = useSlotEdges
+    ? buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
+        unifiedEdgePath(edge, nodeById).map((line, j) => ({ ...line, key: `e${i}-${j}` }))
+      )
+    : layout.connectors.flatMap((conn, i) =>
+        unifiedConnectorLines(conn).map((line, j) => ({ ...line, key: `${i}-${j}` }))
+      );
 
   return (
     <div style={{ overflowX: "auto", paddingBottom: 4 }}>
@@ -1470,6 +1526,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           slotSources={slotSources}
           wbCols={wbCols}
           lbCols={lbCols}
+          templateSize={templateSize}
         />
       ) : (
         <>
