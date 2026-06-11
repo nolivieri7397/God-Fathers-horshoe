@@ -517,10 +517,11 @@ function wbPaddingFor(r) { return (Math.pow(2, r - 1) - 1) * SLOT_H / 2; }
 // UI components
 // ---------------------------------------------------------------------------
 
-function MatchCard({ match, onPick, slotSources }) {
+function MatchCard({ match, onPick, slotSources, scores, onScoreChange }) {
   const { slots, winner, label } = match;
   const ready = slots[0] !== null && slots[1] !== null;
   const done  = winner !== null;
+  const matchScores = scores?.[match.id] ?? {};
 
   return (
     <div style={{ width: 128, flexShrink: 0, borderRight: "1px solid #5a4030", borderLeft: "1px solid #5a4030" }}>
@@ -531,6 +532,7 @@ function MatchCard({ match, onPick, slotSources }) {
         const clickable = !done && ready && p != null && !p?.isBye;
         const isBye     = p?.isBye;
         const isTbd     = !p;
+        const showScore = !isBye && !isTbd && (ready || done);
 
         const nameColor = isWinner ? "#2fa66a"
                         : isLoser  ? "#5a4030"
@@ -557,10 +559,10 @@ function MatchCard({ match, onPick, slotSources }) {
               cursor: clickable ? "pointer" : "default",
               userSelect: "none",
             }}
-            onMouseEnter={e => { if (clickable) e.currentTarget.querySelector("span").style.color = "#c9954a"; }}
-            onMouseLeave={e => { if (clickable) e.currentTarget.querySelector("span").style.color = nameColor; }}
+            onMouseEnter={e => { if (clickable) e.currentTarget.querySelector(".mcard-name").style.color = "#c9954a"; }}
+            onMouseLeave={e => { if (clickable) e.currentTarget.querySelector(".mcard-name").style.color = nameColor; }}
           >
-            <span style={{
+            <span className="mcard-name" style={{
               fontSize: 11,
               fontFamily: isBye || isTbd ? "var(--font-mono)" : "Georgia, serif",
               fontStyle: isBye || isTbd ? "italic" : "normal",
@@ -573,6 +575,30 @@ function MatchCard({ match, onPick, slotSources }) {
             }}>
               {displayName}
             </span>
+            {showScore && (
+              <input
+                type="text"
+                inputMode="numeric"
+                value={matchScores[i] ?? ""}
+                onClick={e => e.stopPropagation()}
+                onChange={e => onScoreChange?.(match.id, i, e.target.value)}
+                style={{
+                  width: 28,
+                  fontSize: 10,
+                  textAlign: "center",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: "1px solid #3a2810",
+                  borderRadius: 0,
+                  color: isWinner ? "#2fa66a" : isLoser ? "#5a4030" : "#9b8461",
+                  fontFamily: "var(--font-mono)",
+                  padding: "0 2px",
+                  outline: "none",
+                  flexShrink: 0,
+                  opacity: isLoser ? 0.5 : 1,
+                }}
+              />
+            )}
             {isWinner && <span style={{ fontSize: 9, color: "#2fa66a", flexShrink: 0 }}>✓</span>}
           </div>
         );
@@ -583,7 +609,7 @@ function MatchCard({ match, onPick, slotSources }) {
 
 // A vertical stack of MatchCards under a round label.
 // roundIndex (1-based) drives WB centering math; omit for LB/Finals (flat layout).
-function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex }) {
+function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex, scores, onScoreChange }) {
   const gap = roundIndex != null ? wbGapFor(roundIndex)    : BASE_GAP;
   const pt  = roundIndex != null ? wbPaddingFor(roundIndex) : 0;
   return (
@@ -599,7 +625,7 @@ function RoundCol({ label, matchIds, matches, onPick, slotSources, roundIndex })
         {matchIds.map((id, i) => (
           <div key={id}>
             {i > 0 && <div style={{ height: gap }} />}
-            <MatchCard match={matches[id]} onPick={onPick} slotSources={slotSources} />
+            <MatchCard match={matches[id]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} />
           </div>
         ))}
       </div>
@@ -877,7 +903,7 @@ function unifiedEdgePath(edge, nodeById) {
 }
 
 // Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
-function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize }) {
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize, scores, onScoreChange }) {
   const layout = buildUnifiedLayout(wbCols, lbCols);
   const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
   const useSlotEdges = templateSize === 8;
@@ -914,7 +940,7 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, te
             key={node.matchId}
             style={{ position: "absolute", left: node.x, top: node.y, width: COL_W, zIndex: 1 }}
           >
-            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} />
+            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} />
           </div>
         ))}
       </div>
@@ -937,6 +963,10 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   const [countInput,   setCountInput]   = useState("8");
   const [validation,   setValidation]   = useState(null); // null = not run yet
   const [humanPickMade, setHumanPickMade] = useState(false);
+  const [scores,       setScores]       = useState({});
+
+  // Mirror of scores for reading inside persist without stale closure.
+  const scoresRef = useRef({});
 
   // Ref attached to the bracket wrapper div — html2canvas uses it as the target.
   const bracketRef = useRef(null);
@@ -1093,13 +1123,15 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        const { matches: m, names: n, playerCount: pc, tournamentName: tn = "", humanPickMade: hpm = false } = JSON.parse(saved);
+        const { matches: m, names: n, playerCount: pc, tournamentName: tn = "", humanPickMade: hpm = false, scores: sc = {} } = JSON.parse(saved);
         setMatches(m);
         setNames(n);
         setPlayerCount(pc);
         setCountInput(String(pc));
         setTournamentName(tn);
         setHumanPickMade(hpm);
+        setScores(sc);
+        scoresRef.current = sc;
         return;
       }
     } catch (e) {}
@@ -1126,7 +1158,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   // tournamentName is read directly from state — no need to pass it as an arg
   // since it's only updated via its own handler which persists immediately.
   const persist = (m, n, pc, hpm = humanPickMade) => {
-    try { localStorage.setItem(storageKey, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm })); } catch (e) {}
+    try { localStorage.setItem(storageKey, JSON.stringify({ matches: m, names: n, playerCount: pc, tournamentName, humanPickMade: hpm, scores: scoresRef.current })); } catch (e) {}
   };
 
   // Updates the tournament name and saves it to localStorage straight away.
@@ -1178,6 +1210,19 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     applyNames(updated);
   };
 
+  const handleScoreChange = (matchId, slotIndex, value) => {
+    setScores(prev => {
+      const next = { ...prev, [matchId]: { ...prev[matchId], [slotIndex]: value } };
+      scoresRef.current = next;
+      try {
+        const saved = localStorage.getItem(storageKey);
+        const base  = saved ? JSON.parse(saved) : {};
+        localStorage.setItem(storageKey, JSON.stringify({ ...base, scores: next }));
+      } catch (e) {}
+      return next;
+    });
+  };
+
   const handlePick = (matchId, slotIndex) => {
     setHumanPickMade(true);
     setMatches(prev => {
@@ -1207,6 +1252,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   const handleRestartTournament = () => {
     setHumanPickMade(false);
     setHistory([]);
+    setScores({});
+    scoresRef.current = {};
     applyNames(names, playerCount, false);
   };
 
@@ -1216,6 +1263,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
     localStorage.removeItem(storageKey);
     setHumanPickMade(false);
     setHistory([]);
+    setScores({});
+    scoresRef.current = {};
     setNames(defaultNames);
     applyNames(defaultNames, playerCount, false);
   };
@@ -1527,6 +1576,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           wbCols={wbCols}
           lbCols={lbCols}
           templateSize={templateSize}
+          scores={scores}
+          onScoreChange={handleScoreChange}
         />
       ) : (
         <>
@@ -1534,7 +1585,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {!allR1Real && playInIds.length > 0 && (
               <div style={{ marginTop: wbPaddingFor(wbMainCols[0].roundIndex) }}>
                 <RoundCol label="Play-In" matchIds={playInIds} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} />
+                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
               </div>
             )}
             {!allR1Real && playInIds.length > 0 && (
@@ -1543,7 +1594,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {wbMainCols.flatMap((col, i) => {
               const items = [
                 <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} />,
+                  onPick={handlePick} slotSources={slotSources} roundIndex={col.roundIndex} scores={scores} onScoreChange={handleScoreChange} />,
               ];
               if (i < wbMainCols.length - 1)
                 items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
@@ -1555,7 +1606,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
             {!allLbR1Real && lbPlayInIds.length > 0 && (
               <div style={{ marginTop: wbPaddingFor(2) }}>
                 <RoundCol label="Play-In" matchIds={lbPlayInIds} matches={matches}
-                  onPick={handlePick} slotSources={slotSources} />
+                  onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
               </div>
             )}
             {(() => {
@@ -1565,7 +1616,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
                 const items = [
                   <RoundCol key={col.label} label={col.label} matchIds={col.ids}
                     matches={matches} onPick={handlePick} slotSources={slotSources}
-                    roundIndex={roundIndex} />,
+                    roundIndex={roundIndex} scores={scores} onScoreChange={handleScoreChange} />,
                 ];
                 if (i < lbMainCols.length - 1) {
                   const isMerge = lbMainCols[i + 1].ids.length < col.ids.length;
@@ -1582,9 +1633,9 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           </Section>
 
           <Section title="Finals" accentColor="#e0b96f">
-            <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
+            <RoundCol label="Grand Final" matchIds={["GF-1"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
             {showReset && (
-              <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} />
+              <RoundCol label="Reset Final" matchIds={["GF-2"]} matches={matches} onPick={handlePick} slotSources={slotSources} scores={scores} onScoreChange={handleScoreChange} />
             )}
           </Section>
         </>
