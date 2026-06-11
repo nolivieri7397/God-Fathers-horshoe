@@ -497,8 +497,10 @@ function buildSlotSources(matches) {
 const CARD_H   = 44;              // match height px (2 rows ~22px each incl. padding + border)
 const BASE_GAP =  8;              // gap between cards in a round-1 column
 const SLOT_H   = CARD_H + BASE_GAP;  // 52 — vertical space each R1 match "owns"
+const COL_W    = 128;             // match-card column width px
 const CONN_W   = 32;              // pixel width of each connector SVG strip
 const LABEL_H  = 20;              // pixel height of a round-column label row
+const BAND_SPACER = 48;           // vertical gap between WB and LB bands on unified canvas
 
 // Unified bracket canvas — Phase 1 (off by default)
 const USE_UNIFIED_CANVAS = false;
@@ -679,46 +681,186 @@ function Section({ title, accentColor, children, colGap = 14 }) {
   );
 }
 
-// Phase 1 unified canvas — WB row, spacer, LB row (no Finals, Play-In, or WB→LB drops).
+// Shared X for a column index on the unified grid (WB and LB use the same column slots).
+function unifiedColumnX(col) { return col * (COL_W + CONN_W); }
+
+// Top Y for a match card inside a band (roundIndex 1-based, matchIndex 0-based).
+function unifiedMatchY(bandTop, roundIndex, matchIndex) {
+  return bandTop + LABEL_H + wbPaddingFor(roundIndex) + matchIndex * (CARD_H + wbGapFor(roundIndex));
+}
+
+// Column stack height for connector / band sizing (matches WbConnectors svgH math).
+function unifiedColumnHeight(roundIndex, numMatches) {
+  return LABEL_H + wbPaddingFor(roundIndex) + numMatches * CARD_H
+    + Math.max(0, numMatches - 1) * wbGapFor(roundIndex) + 10;
+}
+
+// Build positioned nodes + connector specs for the unified canvas (Phase 2A).
+function buildUnifiedLayout(wbCols, lbCols) {
+  const numCols     = lbCols.length;
+  const canvasWidth = numCols * COL_W + Math.max(0, numCols - 1) * CONN_W;
+  const wbBandTop   = 0;
+  const wbBandHeight = unifiedColumnHeight(wbCols[0].roundIndex, wbCols[0].ids.length);
+
+  let mergeLevel = 1;
+  let lbBandHeight = 0;
+  lbCols.forEach((col, i) => {
+    const roundIndex = mergeLevel + 1;
+    lbBandHeight = Math.max(lbBandHeight, unifiedColumnHeight(roundIndex, col.ids.length));
+    if (i < lbCols.length - 1 && lbCols[i + 1].ids.length < col.ids.length) mergeLevel++;
+  });
+
+  const lbBandTop    = wbBandHeight + BAND_SPACER;
+  const canvasHeight = lbBandTop + lbBandHeight;
+
+  const nodes = [];
+
+  wbCols.forEach((col, colIdx) => {
+    col.ids.forEach((matchId, matchIndex) => {
+      nodes.push({
+        matchId,
+        band: "wb",
+        col: colIdx,
+        x: unifiedColumnX(colIdx),
+        y: unifiedMatchY(wbBandTop, col.roundIndex, matchIndex),
+        roundIndex: col.roundIndex,
+      });
+    });
+  });
+
+  mergeLevel = 1;
+  lbCols.forEach((col, colIdx) => {
+    const roundIndex = mergeLevel + 1;
+    col.ids.forEach((matchId, matchIndex) => {
+      nodes.push({
+        matchId,
+        band: "lb",
+        col: colIdx,
+        x: unifiedColumnX(colIdx),
+        y: unifiedMatchY(lbBandTop, roundIndex, matchIndex),
+        roundIndex,
+      });
+    });
+    if (colIdx < lbCols.length - 1 && lbCols[colIdx + 1].ids.length < col.ids.length) mergeLevel++;
+  });
+
+  const connectors = [];
+
+  wbCols.forEach((col, colIdx) => {
+    if (colIdx >= wbCols.length - 1) return;
+    connectors.push({
+      type: "fork",
+      band: "wb",
+      col: colIdx,
+      bandTop: wbBandTop,
+      leftRoundIndex: col.roundIndex,
+      numLeft: col.ids.length,
+    });
+  });
+
+  mergeLevel = 1;
+  lbCols.forEach((col, colIdx) => {
+    if (colIdx >= lbCols.length - 1) return;
+    const roundIndex = mergeLevel + 1;
+    const isMerge = lbCols[colIdx + 1].ids.length < col.ids.length;
+    connectors.push({
+      type: isMerge ? "fork" : "straight",
+      band: "lb",
+      col: colIdx,
+      bandTop: lbBandTop,
+      leftRoundIndex: roundIndex,
+      numLeft: col.ids.length,
+      roundIndex,
+      numMatches: col.ids.length,
+    });
+    if (isMerge) mergeLevel++;
+  });
+
+  return {
+    colWidth: COL_W,
+    connWidth: CONN_W,
+    columnStride: COL_W + CONN_W,
+    numCols,
+    canvasWidth,
+    canvasHeight,
+    wbBandTop,
+    lbBandTop,
+    nodes,
+    connectors,
+  };
+}
+
+// Emit canvas-space line segments for one connector spec (reuses WbConnectors / LbStraight math).
+function unifiedConnectorLines(conn) {
+  const baseX = unifiedColumnX(conn.col) + COL_W;
+  const midX  = baseX + CONN_W / 2;
+  const endX  = baseX + CONN_W;
+  const top   = conn.bandTop;
+  const lines = [];
+
+  if (conn.type === "fork") {
+    const leftPt   = wbPaddingFor(conn.leftRoundIndex);
+    const leftGap  = wbGapFor(conn.leftRoundIndex);
+    const rightPt  = wbPaddingFor(conn.leftRoundIndex + 1);
+    const rightGap = wbGapFor(conn.leftRoundIndex + 1);
+    const numPairs = Math.floor(conn.numLeft / 2);
+    for (let j = 0; j < numPairs; j++) {
+      const yTop = top + LABEL_H + leftPt  + (2 * j)     * (CARD_H + leftGap)  + CARD_H / 2;
+      const yBot = top + LABEL_H + leftPt  + (2 * j + 1) * (CARD_H + leftGap)  + CARD_H / 2;
+      const yMid = top + LABEL_H + rightPt + j            * (CARD_H + rightGap) + CARD_H / 2;
+      lines.push(
+        { x1: baseX, y1: yTop, x2: midX, y2: yTop },
+        { x1: baseX, y1: yBot, x2: midX, y2: yBot },
+        { x1: midX,  y1: yTop, x2: midX, y2: yBot },
+        { x1: midX,  y1: yMid, x2: endX, y2: yMid },
+      );
+    }
+  } else {
+    const pt  = wbPaddingFor(conn.roundIndex);
+    const gap = wbGapFor(conn.roundIndex);
+    for (let i = 0; i < conn.numMatches; i++) {
+      const y = top + LABEL_H + pt + i * (CARD_H + gap) + CARD_H / 2;
+      lines.push({ x1: baseX, y1: y, x2: endX, y2: y });
+    }
+  }
+
+  return lines;
+}
+
+// Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
 function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols }) {
-  const ROW_SPACER = 48;
+  const layout = buildUnifiedLayout(wbCols, lbCols);
+  const allLines = layout.connectors.flatMap((conn, i) =>
+    unifiedConnectorLines(conn).map((line, j) => ({ ...line, key: `${i}-${j}` }))
+  );
 
   return (
     <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-      <div style={{ display: "flex", gap: 0, alignItems: "flex-start", minWidth: "max-content" }}>
-        {wbCols.flatMap((col, i) => {
-          const items = [
-            <RoundCol key={col.label} label={col.label} matchIds={col.ids} matches={matches}
-              onPick={onPick} slotSources={slotSources} roundIndex={col.roundIndex} />,
-          ];
-          if (i < wbCols.length - 1)
-            items.push(<WbConnectors key={`conn-${i}`} leftRoundIndex={col.roundIndex} numLeft={col.ids.length} />);
-          return items;
-        })}
-      </div>
-      <div style={{ height: ROW_SPACER }} />
-      <div style={{ display: "flex", gap: 0, alignItems: "flex-start", minWidth: "max-content" }}>
-        {(() => {
-          let mergeLevel = 1;
-          return lbCols.flatMap((col, i) => {
-            const roundIndex = mergeLevel + 1;
-            const items = [
-              <RoundCol key={col.label} label={col.label} matchIds={col.ids}
-                matches={matches} onPick={onPick} slotSources={slotSources}
-                roundIndex={roundIndex} />,
-            ];
-            if (i < lbCols.length - 1) {
-              const isMerge = lbCols[i + 1].ids.length < col.ids.length;
-              if (isMerge) {
-                items.push(<WbConnectors key={`lb-conn-${i}`} leftRoundIndex={roundIndex} numLeft={col.ids.length} />);
-                mergeLevel++;
-              } else {
-                items.push(<LbStraightConnectors key={`lb-conn-${i}`} roundIndex={roundIndex} numMatches={col.ids.length} />);
-              }
-            }
-            return items;
-          });
-        })()}
+      <div style={{
+        position: "relative",
+        width: layout.canvasWidth,
+        height: layout.canvasHeight,
+        minWidth: "max-content",
+      }}>
+        <svg
+          width={layout.canvasWidth}
+          height={layout.canvasHeight}
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}
+        >
+          <g stroke="#8a6840" strokeWidth={1.5} fill="none">
+            {allLines.map(line => (
+              <line key={line.key} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+            ))}
+          </g>
+        </svg>
+        {layout.nodes.map(node => (
+          <div
+            key={node.matchId}
+            style={{ position: "absolute", left: node.x, top: node.y, width: COL_W, zIndex: 1 }}
+          >
+            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} />
+          </div>
+        ))}
       </div>
     </div>
   );
