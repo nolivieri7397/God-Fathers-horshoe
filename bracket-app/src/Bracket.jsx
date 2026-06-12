@@ -502,8 +502,8 @@ const CONN_W   = 32;              // pixel width of each connector SVG strip
 const LABEL_H  = 20;              // pixel height of a round-column label row
 const BAND_SPACER = 48;           // vertical gap between WB and LB bands on unified canvas
 
-// Unified bracket canvas — Phase 1 (off by default)
-const USE_UNIFIED_CANVAS = false;
+// Unified bracket canvas — live as of 2026-06-11 (legacy renderer kept as fallback)
+const USE_UNIFIED_CANVAS = true;
 
 // Gap between match cards in a WB column at round-index r (1-based).
 // Doubles with each round so later rounds space out to stay centered on their feeders.
@@ -761,7 +761,10 @@ function buildUnifiedLayout(wbCols, lbCols) {
   const numCols     = lbCols.length;
   const canvasWidth = numCols * COL_W + Math.max(0, numCols - 1) * CONN_W;
   const wbBandTop   = 0;
-  const wbBandHeight = unifiedColumnHeight(wbCols[0].roundIndex, wbCols[0].ids.length);
+  // Max over all WB columns — identical to col-0 height for full first
+  // columns, but stays correct when play-in filtering shrinks column 0.
+  const wbBandHeight = Math.max(...wbCols.map(col =>
+    unifiedColumnHeight(col.roundIndex, col.ids.length)));
 
   let mergeLevel = 1;
   let lbBandHeight = 0;
@@ -805,87 +808,30 @@ function buildUnifiedLayout(wbCols, lbCols) {
     if (colIdx < lbCols.length - 1 && lbCols[colIdx + 1].ids.length < col.ids.length) mergeLevel++;
   });
 
-  const connectors = [];
-
-  wbCols.forEach((col, colIdx) => {
-    if (colIdx >= wbCols.length - 1) return;
-    connectors.push({
-      type: "fork",
-      band: "wb",
-      col: colIdx,
-      bandTop: wbBandTop,
-      leftRoundIndex: col.roundIndex,
-      numLeft: col.ids.length,
-    });
-  });
-
-  mergeLevel = 1;
-  lbCols.forEach((col, colIdx) => {
-    if (colIdx >= lbCols.length - 1) return;
-    const roundIndex = mergeLevel + 1;
-    const isMerge = lbCols[colIdx + 1].ids.length < col.ids.length;
-    connectors.push({
-      type: isMerge ? "fork" : "straight",
-      band: "lb",
-      col: colIdx,
-      bandTop: lbBandTop,
-      leftRoundIndex: roundIndex,
-      numLeft: col.ids.length,
-      roundIndex,
-      numMatches: col.ids.length,
-    });
-    if (isMerge) mergeLevel++;
-  });
+  // Finals convergence columns (display-only): GF-1 one stride right of the
+  // last shared column, vertically centered between the WB and LB finals;
+  // GF-2 (reset final) one further stride right.
+  const wbFinalNode = nodes.find(n => n.band === "wb" && n.col === wbCols.length - 1);
+  const lbFinalNode = nodes.find(n => n.band === "lb" && n.col === lbCols.length - 1);
+  let gfNodes = null;
+  if (wbFinalNode && lbFinalNode) {
+    const wbFinalCenterY = wbFinalNode.y + CARD_H / 2;
+    const lbFinalCenterY = lbFinalNode.y + CARD_H / 2;
+    const gfY  = (wbFinalCenterY + lbFinalCenterY) / 2 - CARD_H / 2;
+    const gf1  = { matchId: "GF-1", band: "finals", col: numCols,     x: unifiedColumnX(numCols),     y: gfY };
+    const gf2  = { matchId: "GF-2", band: "finals", col: numCols + 1, x: unifiedColumnX(numCols + 1), y: gfY };
+    nodes.push(gf1, gf2);
+    gfNodes = { gf1, gf2, wbFinalNode, lbFinalNode };
+  }
 
   return {
-    colWidth: COL_W,
-    connWidth: CONN_W,
-    columnStride: COL_W + CONN_W,
-    numCols,
-    canvasWidth,
+    canvasWidth: canvasWidth + (gfNodes ? 2 * (COL_W + CONN_W) : 0),
     canvasHeight,
     wbBandTop,
     lbBandTop,
     nodes,
-    connectors,
+    gfNodes,
   };
-}
-
-// Emit canvas-space line segments for one connector spec (reuses WbConnectors / LbStraight math).
-function unifiedConnectorLines(conn) {
-  const baseX = unifiedColumnX(conn.col) + COL_W;
-  const midX  = baseX + CONN_W / 2;
-  const endX  = baseX + CONN_W;
-  const top   = conn.bandTop;
-  const lines = [];
-
-  if (conn.type === "fork") {
-    const leftPt   = wbPaddingFor(conn.leftRoundIndex);
-    const leftGap  = wbGapFor(conn.leftRoundIndex);
-    const rightPt  = wbPaddingFor(conn.leftRoundIndex + 1);
-    const rightGap = wbGapFor(conn.leftRoundIndex + 1);
-    const numPairs = Math.floor(conn.numLeft / 2);
-    for (let j = 0; j < numPairs; j++) {
-      const yTop = top + LABEL_H + leftPt  + (2 * j)     * (CARD_H + leftGap)  + CARD_H / 2;
-      const yBot = top + LABEL_H + leftPt  + (2 * j + 1) * (CARD_H + leftGap)  + CARD_H / 2;
-      const yMid = top + LABEL_H + rightPt + j            * (CARD_H + rightGap) + CARD_H / 2;
-      lines.push(
-        { x1: baseX, y1: yTop, x2: midX, y2: yTop },
-        { x1: baseX, y1: yBot, x2: midX, y2: yBot },
-        { x1: midX,  y1: yTop, x2: midX, y2: yBot },
-        { x1: midX,  y1: yMid, x2: endX, y2: yMid },
-      );
-    }
-  } else {
-    const pt  = wbPaddingFor(conn.roundIndex);
-    const gap = wbGapFor(conn.roundIndex);
-    for (let i = 0; i < conn.numMatches; i++) {
-      const y = top + LABEL_H + pt + i * (CARD_H + gap) + CARD_H / 2;
-      lines.push({ x1: baseX, y1: y, x2: endX, y2: y });
-    }
-  }
-
-  return lines;
 }
 
 // --- Phase 2A-slot: graph-driven, slot-accurate connector endpoints (display only) ---
@@ -937,45 +883,233 @@ function unifiedEdgePath(edge, nodeById) {
   ];
 }
 
-// Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
-function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, templateSize, scores, onScoreChange, pits, onPitChange }) {
-  const layout = buildUnifiedLayout(wbCols, lbCols);
-  const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
-  const useSlotEdges = templateSize === 8;
+// Compress a slotSources string into a Diamond-style feed label:
+// "loser of W1-3" → "L W1-3", "winner of L2-1" → "W L2-1". Display-only.
+function compactFeedLabel(sourceText) {
+  if (!sourceText) return null;
+  const m = /^(loser|winner) of (.+)$/.exec(sourceText);
+  if (!m) return sourceText;
+  return `${m[1] === "loser" ? "L" : "W"} ${m[2]}`;
+}
 
-  const allLines = useSlotEdges
-    ? buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
-        unifiedEdgePath(edge, nodeById).map((line, j) => ({ ...line, key: `e${i}-${j}` }))
-      )
-    : layout.connectors.flatMap((conn, i) =>
-        unifiedConnectorLines(conn).map((line, j) => ({ ...line, key: `${i}-${j}` }))
-      );
+// Plain Diamond Scheduler-style match node — unified canvas only.
+// No box, no theme: each slot is black text sitting on a thin black rule.
+// Row height is locked to CARD_H/2 so existing connector endpoint math holds.
+function UnifiedMatchNode({ match, onPick, slotSources, scores, onScoreChange, pitNumber, onPitChange }) {
+  const { slots, winner } = match;
+  const ready = slots[0] !== null && slots[1] !== null;
+  const done  = winner !== null;
+  const matchScores = scores?.[match.id] ?? {};
+  const showPitInput = ready && !done;
+  const showPitBadge = done && !!pitNumber;
 
   return (
-    <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+    <div style={{ width: COL_W, flexShrink: 0, background: "transparent" }}>
+      {[0, 1].map(i => {
+        const p         = slots[i];
+        const isWinner  = done && p?.id === winner?.id;
+        const isLoser   = done && p?.id !== winner?.id;
+        const clickable = !done && ready && p != null && !p?.isBye;
+        const isBye     = p?.isBye;
+        const isTbd     = !p;
+        const showScore = !isBye && !isTbd && (ready || done);
+        const feed      = isTbd ? compactFeedLabel(slotSources?.[match.id]?.[i]) : null;
+
+        const displayName = p ? (p.isBye ? "BYE" : p.name) : (feed ?? "");
+
+        return (
+          <div
+            key={i}
+            onClick={() => clickable && onPick(match.id, i)}
+            title={clickable ? `Pick ${p.name} as winner` : undefined}
+            style={{
+              boxSizing: "border-box",
+              height: CARD_H / 2,
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 4,
+              padding: "0 2px 1px 2px",
+              borderBottom: "1px solid #000",
+              cursor: clickable ? "pointer" : "default",
+              userSelect: "none",
+              background: "transparent",
+            }}
+          >
+            <span style={{
+              fontSize: 11,
+              fontFamily: "Arial, Helvetica, sans-serif",
+              fontStyle: isBye || isTbd ? "italic" : "normal",
+              fontWeight: isWinner ? 700 : 400,
+              color: isBye || isTbd ? "#888" : isLoser ? "#999" : "#000",
+              flex: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
+              {displayName}
+            </span>
+            {showScore && (
+              <input
+                type="text"
+                inputMode="numeric"
+                value={matchScores[i] ?? ""}
+                onClick={e => e.stopPropagation()}
+                onChange={e => onScoreChange?.(match.id, i, e.target.value)}
+                style={{
+                  width: 24, fontSize: 10, textAlign: "center",
+                  background: "transparent", border: "none", borderRadius: 0,
+                  color: isLoser ? "#999" : "#000",
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  padding: 0, outline: "none", flexShrink: 0,
+                }}
+              />
+            )}
+            {(showPitInput || showPitBadge) && i === 0 && (
+              showPitInput ? (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={pitNumber ?? ""}
+                  placeholder="pit"
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => onPitChange?.(match.id, e.target.value)}
+                  style={{
+                    width: 22, fontSize: 9, textAlign: "center",
+                    background: "transparent", border: "none",
+                    borderBottom: "1px dotted #999", borderRadius: 0,
+                    color: "#555", fontFamily: "Arial, Helvetica, sans-serif",
+                    padding: 0, outline: "none", flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 9, color: "#555", fontFamily: "Arial, Helvetica, sans-serif", flexShrink: 0 }}>
+                  P{pitNumber}
+                </span>
+              )
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Display-only play-in filter for the unified canvas (mirrors the legacy
+// renderer's play-in logic). Drops BYE-containing R1 matches from the WB and
+// LB first columns — those players already appear in the next round via the
+// engine's existing auto-advance. No engine data is read beyond slot.isBye.
+function filterUnifiedPlayInCols(matches, cols) {
+  if (!cols.length) return cols;
+  const realIds = cols[0].ids.filter(id => !matches[id]?.slots?.some(s => s?.isBye));
+  if (realIds.length === cols[0].ids.length) return cols; // no BYEs — unchanged
+  return [{ ...cols[0], label: "Play-In", ids: realIds }, ...cols.slice(1)];
+}
+
+// Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, scores, onScoreChange, pits, onPitChange }) {
+  // All sizes use graph-driven slot edges, so play-in filtering is safe
+  // everywhere: edges are computed from actual node coordinates, never from
+  // first-column match counts.
+  const wbDisplayCols = filterUnifiedPlayInCols(matches, wbCols);
+  const lbDisplayCols = filterUnifiedPlayInCols(matches, lbCols);
+  const layout = buildUnifiedLayout(wbDisplayCols, lbDisplayCols);
+  const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
+  // Graph-driven slot edges for all template sizes (8/16/32).
+  const allLines = buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
+    unifiedEdgePath(edge, nodeById).map((line, j) => ({ ...line, key: `e${i}-${j}` }))
+  );
+
+  // Finals convergence (display-only): WB final → GF-1 slot 0, LB final → GF-1 slot 1.
+  if (layout.gfNodes) {
+    const { gf1, wbFinalNode, lbFinalNode } = layout.gfNodes;
+    [[wbFinalNode, 0], [lbFinalNode, 1]].forEach(([srcNode, slot], i) => {
+      const out  = unifiedSourceOutPoint(srcNode);
+      const inn  = unifiedDestInPoint(gf1, slot);
+      const midX = gf1.x - CONN_W / 2;
+      allLines.push(
+        { key: `gf-${i}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
+        { key: `gf-${i}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
+        { key: `gf-${i}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
+      );
+    });
+  }
+
+  // Dashed "if first loss" continuation: GF-1 → GF-2 slot rows.
+  const dashedLines = [];
+  if (layout.gfNodes) {
+    const { gf1, gf2 } = layout.gfNodes;
+    const out  = unifiedSourceOutPoint(gf1);
+    const midX = gf2.x - CONN_W / 2;
+    [0, 1].forEach(slot => {
+      const inn = unifiedDestInPoint(gf2, slot);
+      dashedLines.push(
+        { key: `rst-${slot}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
+        { key: `rst-${slot}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
+        { key: `rst-${slot}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
+      );
+    });
+  }
+
+  const sansFont = "Arial, Helvetica, sans-serif";
+
+  return (
+    <div style={{ overflowX: "auto", paddingBottom: 4, background: "#fff", borderRadius: 2 }}>
       <div style={{
         position: "relative",
         width: layout.canvasWidth,
         height: layout.canvasHeight,
         minWidth: "max-content",
+        background: "#fff",
+        color: "#000",
+        padding: "8px 12px 16px",
       }}>
+        {/* Band labels, Diamond Scheduler style */}
+        <div style={{
+          position: "absolute", left: 4, top: layout.wbBandTop,
+          fontSize: 12, fontFamily: sansFont, color: "#000", zIndex: 2,
+        }}>Winner's Bracket</div>
+        <div style={{
+          position: "absolute", left: 4, top: layout.lbBandTop - 16,
+          fontSize: 12, fontFamily: sansFont, color: "#000", zIndex: 2,
+        }}>Loser's Bracket</div>
+
         <svg
           width={layout.canvasWidth}
           height={layout.canvasHeight}
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}
+          style={{ position: "absolute", top: 8, left: 12, pointerEvents: "none", overflow: "visible" }}
         >
-          <g stroke="#8a6840" strokeWidth={1.5} fill="none">
+          <g stroke="#000" strokeWidth={1} fill="none">
             {allLines.map(line => (
               <line key={line.key} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
             ))}
           </g>
+          <g stroke="#000" strokeWidth={1} fill="none" strokeDasharray="6 5">
+            {dashedLines.map(line => (
+              <line key={line.key} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+            ))}
+          </g>
         </svg>
+        {layout.gfNodes && (
+          <div style={{
+            position: "absolute",
+            left: layout.gfNodes.gf2.x + 12,
+            top: layout.gfNodes.gf2.y + 8 + CARD_H + 6,
+            fontSize: 11, fontFamily: sansFont, color: "#000",
+            whiteSpace: "nowrap", zIndex: 2,
+          }}>If First Loss</div>
+        )}
         {layout.nodes.map(node => (
           <div
             key={node.matchId}
-            style={{ position: "absolute", left: node.x, top: node.y, width: COL_W, zIndex: 1 }}
+            style={{ position: "absolute", left: node.x + 12, top: node.y + 8, width: COL_W, zIndex: 1 }}
           >
-            <MatchCard match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} pitNumber={pits?.[node.matchId]} onPitChange={onPitChange} />
+            <UnifiedMatchNode match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} pitNumber={pits?.[node.matchId]} onPitChange={onPitChange} />
+            {/* Match number near the output join */}
+            <span style={{
+              position: "absolute", left: COL_W + 3, top: CARD_H / 2 - 6,
+              fontSize: 9, fontFamily: sansFont, color: "#000",
+              whiteSpace: "nowrap", pointerEvents: "none",
+            }}>({matches[node.matchId]?.label ?? node.matchId}</span>
           </div>
         ))}
       </div>
@@ -1632,7 +1766,6 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           slotSources={slotSources}
           wbCols={wbCols}
           lbCols={lbCols}
-          templateSize={templateSize}
           scores={scores}
           onScoreChange={handleScoreChange}
           pits={pits}
