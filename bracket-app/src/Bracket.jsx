@@ -1007,15 +1007,16 @@ function UnifiedMatchNode({ match, onPick, slotSources, scores, onScoreChange, p
                   onClick={e => e.stopPropagation()}
                   onChange={e => onPitChange?.(match.id, e.target.value)}
                   style={{
-                    width: 22, fontSize: 9, textAlign: "center",
+                    width: 20, fontSize: 8, textAlign: "center",
                     background: "transparent", border: "none",
-                    borderBottom: "1px dotted #999", borderRadius: 0,
-                    color: "#555", fontFamily: "Arial, Helvetica, sans-serif",
+                    borderBottom: (pitNumber ?? "") === "" ? "1px dotted #bbb" : "none",
+                    borderRadius: 0,
+                    color: "#999", fontFamily: "Arial, Helvetica, sans-serif",
                     padding: 0, outline: "none", flexShrink: 0,
                   }}
                 />
               ) : (
-                <span style={{ fontSize: 9, color: "#555", fontFamily: "Arial, Helvetica, sans-serif", flexShrink: 0 }}>
+                <span style={{ fontSize: 8, color: "#aaa", fontFamily: "Arial, Helvetica, sans-serif", flexShrink: 0 }}>
                   P{pitNumber}
                 </span>
               )

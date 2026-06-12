@@ -128,9 +128,15 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack, initia
         <div style={{ marginBottom: 24 }}>
           <div style={{
             fontSize: 9, color: "#3a2810", fontFamily: mono,
-            letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8,
+            letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4,
           }}>
             {teams.length > 32 ? "Teams (first 32 will be used)" : `Teams — ${Math.min(teams.length, 32)} bracket participants`}
+          </div>
+          <div style={{
+            fontSize: 11, color: "#9b8461", fontFamily: mono,
+            marginBottom: 10, letterSpacing: "0.04em",
+          }}>
+            ✎ Edit team names below before generating the bracket
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {teams.slice(0, 32).map((name, i) => (
@@ -141,12 +147,16 @@ export default function SetupScreen({ tournamentName, onGenerate, onBack, initia
                 <input
                   value={name}
                   onChange={e => handleTeamNameChange(i, e.target.value)}
+                  title="Click to rename this team"
                   style={{
                     flex: 1, fontSize: 13, fontFamily: mono,
-                    background: "#120d08", border: "1px solid #3a2810",
-                    borderRadius: 2, color: "#9b8461", padding: "4px 8px", outline: "none",
+                    background: "#120d08", border: "1px solid #5a4030",
+                    borderRadius: 2, color: "#e0b96f", padding: "4px 8px", outline: "none",
                   }}
+                  onFocus={e => e.target.style.borderColor = "#c9954a"}
+                  onBlur={e => e.target.style.borderColor = "#5a4030"}
                 />
+                <span style={{ fontSize: 11, color: "#5a4030", fontFamily: mono, flexShrink: 0 }}>✎</span>
               </div>
             ))}
           </div>
