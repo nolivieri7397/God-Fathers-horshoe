@@ -744,12 +744,12 @@ function Section({ title, accentColor, children, colGap = 14 }) {
 
 // Unified-canvas-only spacing — printed-diagram proportions. The legacy
 // renderer keeps COL_W / CONN_W / CARD_H / BASE_GAP untouched.
-const U_COL_W       = 190;             // match width (longer team lines)
-const U_CONN_W      = 70;              // gap between columns (longer elbows)
+const U_COL_W       = 180;             // match width (longer team lines)
+const U_CONN_W      = 58;              // gap between columns (longer elbows)
 const U_CARD_H      = 60;              // match height (slot rows 30px each)
-const U_BASE_GAP    = 28;              // gap between matches in a round-1 column
+const U_BASE_GAP    = 22;              // gap between matches in a round-1 column
 const U_SLOT_H      = U_CARD_H + U_BASE_GAP;
-const U_BAND_SPACER = 80;              // vertical gap between WB and LB bands
+const U_BAND_SPACER = 64;              // vertical gap between WB and LB bands
 const U_GF_EXTRA    = 60;              // extra horizontal room before Grand Final
 
 // Unified-only versions of wbGapFor / wbPaddingFor (same formulas, U-constants).
@@ -839,7 +839,8 @@ function buildUnifiedLayout(wbCols, lbCols) {
   }
 
   return {
-    canvasWidth: canvasWidth + (gfNodes ? 2 * (U_COL_W + U_CONN_W) + 2 * U_GF_EXTRA : 0),
+    // +28 tail allowance keeps the last match-number span inside the canvas.
+    canvasWidth: canvasWidth + (gfNodes ? 2 * (U_COL_W + U_CONN_W) + 2 * U_GF_EXTRA + 28 : 0),
     canvasHeight,
     wbBandTop,
     lbBandTop,
@@ -1038,7 +1039,7 @@ function filterUnifiedPlayInCols(matches, cols) {
 }
 
 // Phase 2A unified canvas — one positioned grid, WB upper band, LB lower band, SVG overlay.
-function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, scores, onScoreChange, pits, onPitChange }) {
+function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, scores, onScoreChange, pits, onPitChange, playerCount }) {
   // All sizes use graph-driven slot edges, so play-in filtering is safe
   // everywhere: edges are computed from actual node coordinates, never from
   // first-column match counts.
@@ -1085,16 +1086,55 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
 
   const sansFont = "Arial, Helvetica, sans-serif";
 
+  // Fit-to-page scale: the bracket's internal coordinates are untouched; the
+  // whole rendered canvas is scaled down with a CSS transform so the full
+  // diagram fits the viewport without page scrolling.
+  const TITLE_H = 48;
+  const totalW  = layout.canvasWidth  + 24;            // + horizontal padding
+  const totalH  = layout.canvasHeight + TITLE_H + 24;  // + title + vertical padding
+  // Readability floor: never scale below this. Small brackets fit well above
+  // it; large ones (32 players) hit the floor and scroll inside the bracket
+  // viewport only — page-level scrolling is never caused by the bracket.
+  const U_MIN_SCALE = 0.55;
+  const viewportRef = useRef(null);
+  const [view, setView] = useState({ scale: 1, maxH: null });
+  useEffect(() => {
+    const measure = () => {
+      const el = viewportRef.current;
+      if (!el) return;
+      const availW = el.clientWidth;
+      // Budget one full screen of height: the bracket always fits a single
+      // viewport, regardless of how much header content sits above it.
+      const availH = window.innerHeight - 32;
+      // -6px guard absorbs subpixel rounding so a hairline overflow never
+      // produces a spurious scrollbar.
+      const fit = Math.min((availW - 6) / totalW, (availH - 6) / totalH, 1);
+      setView({ scale: Math.max(fit, U_MIN_SCALE), maxH: availH });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [totalW, totalH]);
+  const scale = view.scale;
+
   return (
-    <div style={{ overflowX: "auto", paddingBottom: 4, background: "#fff", borderRadius: 2 }}>
+    <div ref={viewportRef} style={{
+      width: "100%",
+      // Internal scroll only when the floored scale overflows the viewport.
+      overflow: "auto",
+      maxHeight: view.maxH ?? undefined,
+    }}>
+      <div style={{ width: totalW * scale, height: totalH * scale, margin: "0 auto" }}>
       <div style={{
         position: "relative",
         width: layout.canvasWidth,
-        height: layout.canvasHeight,
-        minWidth: "max-content",
+        height: layout.canvasHeight + TITLE_H,
         background: "#fff",
         color: "#000",
         padding: "8px 12px 16px",
+        borderRadius: 2,
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
       }}>
         {/* Empty score/pit inputs stay invisible until the row is hovered or
             the input is focused — handlers and data untouched. */}
@@ -1102,20 +1142,27 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
           .uslot input.uempty { opacity: 0; }
           .uslot:hover input.uempty, .uslot input.uempty:focus { opacity: 1; }
         `}</style>
+        {/* Centered title, reference style */}
+        <div style={{
+          position: "absolute", left: 0, top: 6, width: "100%",
+          textAlign: "center", fontSize: 26, fontWeight: 700,
+          fontFamily: sansFont, color: "#000", zIndex: 2,
+          pointerEvents: "none",
+        }}>{playerCount ? `${playerCount} Team Double Elimination` : "Double Elimination"}</div>
         {/* Band labels, Diamond Scheduler style */}
         <div style={{
-          position: "absolute", left: 4, top: layout.wbBandTop,
+          position: "absolute", left: 4, top: TITLE_H + layout.wbBandTop,
           fontSize: 12, fontFamily: sansFont, color: "#000", zIndex: 2,
         }}>Winner's Bracket</div>
         <div style={{
-          position: "absolute", left: 4, top: layout.lbBandTop - 16,
+          position: "absolute", left: 4, top: TITLE_H + layout.lbBandTop - 16,
           fontSize: 12, fontFamily: sansFont, color: "#000", zIndex: 2,
         }}>Loser's Bracket</div>
 
         <svg
           width={layout.canvasWidth}
           height={layout.canvasHeight}
-          style={{ position: "absolute", top: 8, left: 12, pointerEvents: "none", overflow: "visible" }}
+          style={{ position: "absolute", top: 8 + TITLE_H, left: 12, pointerEvents: "none", overflow: "visible" }}
         >
           <g stroke="#000" strokeWidth={1} fill="none">
             {allLines.map(line => (
@@ -1132,7 +1179,7 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
           <div style={{
             position: "absolute",
             left: layout.gfNodes.gf2.x + 12,
-            top: layout.gfNodes.gf2.y + 8 + U_CARD_H + 14,
+            top: TITLE_H + layout.gfNodes.gf2.y + 8 + U_CARD_H + 14,
             fontSize: 11, fontFamily: sansFont, color: "#000",
             whiteSpace: "nowrap", zIndex: 2,
           }}>If First Loss</div>
@@ -1140,7 +1187,7 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
         {layout.nodes.map(node => (
           <div
             key={node.matchId}
-            style={{ position: "absolute", left: node.x + 12, top: node.y + 8, width: U_COL_W, zIndex: 1 }}
+            style={{ position: "absolute", left: node.x + 12, top: TITLE_H + node.y + 8, width: U_COL_W, zIndex: 1 }}
           >
             <UnifiedMatchNode match={matches[node.matchId]} onPick={onPick} slotSources={slotSources} scores={scores} onScoreChange={onScoreChange} pitNumber={pits?.[node.matchId]} onPitChange={onPitChange} displayNums={displayNums} />
             {/* Match number — small, above the output line, clear of elbows */}
@@ -1151,6 +1198,7 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
             }}>({displayNums[node.matchId]}</span>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -1771,9 +1819,9 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           {anyResultPicked ? "PLAYERS — LOCKED DURING TOURNAMENT" : "NAMES — EDIT BEFORE PLAY STARTS"}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 5 }}>
+        <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 5, maxWidth: "100%" }}>
           {names.map((name, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
               <span style={{
                 fontSize: 10, color: "#3a2810",
                 fontFamily: "var(--font-mono)", minWidth: 18, textAlign: "right", flexShrink: 0,
@@ -1784,7 +1832,8 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
                 placeholder={`Player ${i + 1}`}
                 disabled={anyResultPicked}
                 style={{
-                  flex: 1, fontSize: 12, fontFamily: "var(--font-mono)",
+                  flex: 1, minWidth: 0, boxSizing: "border-box",
+                  fontSize: 12, fontFamily: "var(--font-mono)",
                   background: "transparent", border: "none", borderBottom: "1px solid #2a1c0c",
                   borderRadius: 0, color: "#9b8461", padding: "2px 0",
                   outline: "none",
@@ -1805,6 +1854,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           slotSources={slotSources}
           wbCols={wbCols}
           lbCols={lbCols}
+          playerCount={playerCount}
           scores={scores}
           onScoreChange={handleScoreChange}
           pits={pits}
