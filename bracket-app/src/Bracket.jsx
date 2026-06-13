@@ -1228,6 +1228,27 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
   const lbDisplayCols = filterUnifiedPlayInCols(matches, lbCols);
   const layout = buildUnifiedLayout(wbDisplayCols, lbDisplayCols, M);
   const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
+
+  // Pass A — play-in destination alignment (display-only, Reference View only).
+  // When BYE filtering produced a play-in column, slide each surviving col-0
+  // node so its output midline meets its winnerTo destination slot, like the
+  // Diamond Scheduler sheet. winnerTo is read-only; edges follow node coords.
+  const alignPlayIn = (cols, band) => {
+    if (cols[0]?.label !== "Play-In") return;
+    layout.nodes.forEach(n => {
+      if (n.band !== band || n.col !== 0) return;
+      const dest = matches[n.matchId]?.winnerTo;
+      const dn = dest && nodeById[dest.id];
+      if (!dn) return;
+      n.y = unifiedSlotCenterY(dn.y, dest.slot, M) - M.cardH / 2;
+    });
+  };
+  alignPlayIn(wbDisplayCols, "wb");
+  alignPlayIn(lbDisplayCols, "lb");
+  // Shifted nodes must not clip the canvas bottom.
+  layout.canvasHeight = Math.max(layout.canvasHeight,
+    ...layout.nodes.map(n => n.y + M.cardH + 10));
+
   const displayNums = buildUnifiedDisplayNumbers(layout.nodes);
 
   const allLines = buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
@@ -1373,9 +1394,10 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
                     </div>
                   );
                 })}
-                {/* Match number — black, baseline just above the output line, like "(9" in the reference */}
+                {/* Match number — anchored just inside the line end at the
+                    join, like "(9" in the reference, not in the connector gap */}
                 <span style={{
-                  position: "absolute", left: M.colW + 4, top: M.cardH / 2 - 13,
+                  position: "absolute", right: 4, top: M.cardH / 2 + 1,
                   fontSize: 9, fontFamily: sansFont, color: "#000", whiteSpace: "nowrap",
                 }}>({displayNums[node.matchId]}</span>
               </div>
