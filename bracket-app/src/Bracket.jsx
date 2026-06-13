@@ -1233,6 +1233,24 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
   // When BYE filtering produced a play-in column, slide each surviving col-0
   // node so its output midline meets its winnerTo destination slot, like the
   // Diamond Scheduler sheet. winnerTo is read-only; edges follow node coords.
+  // Reference-only pipe anchors: connectors attach to the VISIBLE rule lines
+  // (each slot row's bottom border), not slot centers. Every match gets a
+  // vertical merge segment closing the bracket "]"; the output leaves from
+  // that segment's midpoint — classic printed-bracket pipes.
+  const refRuleY = (node, slot) => node.y + (slot + 1) * (M.cardH / 2);
+  const refOut   = (node) => ({ x: node.x + M.colW, y: node.y + 0.75 * M.cardH });
+  const refIn    = (node, slot) => ({ x: node.x, y: refRuleY(node, slot) });
+  const refEdgePath = (srcNode, destNode, destSlot) => {
+    const out  = refOut(srcNode);
+    const inn  = refIn(destNode, destSlot);
+    const midX = destNode.x - M.connW / 2;
+    return [
+      { x1: out.x, y1: out.y, x2: midX, y2: out.y },
+      { x1: midX,  y1: out.y, x2: midX, y2: inn.y },
+      { x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
+    ];
+  };
+
   const alignPlayIn = (cols, band) => {
     if (cols[0]?.label !== "Play-In") return;
     layout.nodes.forEach(n => {
@@ -1240,7 +1258,8 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
       const dest = matches[n.matchId]?.winnerTo;
       const dn = dest && nodeById[dest.id];
       if (!dn) return;
-      n.y = unifiedSlotCenterY(dn.y, dest.slot, M) - M.cardH / 2;
+      // Output midpoint (0.75·cardH) flows straight into the destination rule.
+      n.y = refRuleY(dn, dest.slot) - 0.75 * M.cardH;
     });
   };
   alignPlayIn(wbDisplayCols, "wb");
@@ -1252,33 +1271,37 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
   const displayNums = buildUnifiedDisplayNumbers(layout.nodes);
 
   const allLines = buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
-    unifiedEdgePath(edge, nodeById, M).map((line, j) => ({ ...line, key: `e${i}-${j}` }))
+    refEdgePath(nodeById[edge.sourceId], nodeById[edge.destId], edge.destSlot)
+      .map((line, j) => ({ ...line, key: `e${i}-${j}` }))
   );
+  // Vertical merge segment at the right edge of every match (GF-2's is dashed
+  // to match the conditional reset styling).
+  layout.nodes.forEach(n => {
+    if (n.matchId === "GF-2") return;
+    allLines.push({
+      key: `mrg-${n.matchId}`,
+      x1: n.x + M.colW, y1: refRuleY(n, 0),
+      x2: n.x + M.colW, y2: refRuleY(n, 1),
+    });
+  });
   if (layout.gfNodes) {
     const { gf1, wbFinalNode, lbFinalNode } = layout.gfNodes;
     [[wbFinalNode, 0], [lbFinalNode, 1]].forEach(([srcNode, slot], i) => {
-      const out  = unifiedSourceOutPoint(srcNode, M);
-      const inn  = unifiedDestInPoint(gf1, slot, M);
-      const midX = gf1.x - M.connW / 2;
-      allLines.push(
-        { key: `gf-${i}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
-        { key: `gf-${i}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
-        { key: `gf-${i}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
-      );
+      refEdgePath(srcNode, gf1, slot).forEach((line, j) =>
+        allLines.push({ ...line, key: `gf-${i}-${j}` }));
     });
   }
   const dashedLines = [];
   if (layout.gfNodes) {
     const { gf1, gf2 } = layout.gfNodes;
-    const out  = unifiedSourceOutPoint(gf1, M);
-    const midX = gf2.x - M.connW / 2;
     [0, 1].forEach(slot => {
-      const inn = unifiedDestInPoint(gf2, slot, M);
-      dashedLines.push(
-        { key: `rst-${slot}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
-        { key: `rst-${slot}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
-        { key: `rst-${slot}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
-      );
+      refEdgePath(gf1, gf2, slot).forEach((line, j) =>
+        dashedLines.push({ ...line, key: `rst-${slot}-${j}` }));
+    });
+    dashedLines.push({
+      key: "mrg-GF-2",
+      x1: gf2.x + M.colW, y1: refRuleY(gf2, 0),
+      x2: gf2.x + M.colW, y2: refRuleY(gf2, 1),
     });
   }
 
