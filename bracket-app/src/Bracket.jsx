@@ -752,43 +752,51 @@ const U_SLOT_H      = U_CARD_H + U_BASE_GAP;
 const U_BAND_SPACER = 96;              // vertical gap between WB and LB bands
 const U_GF_EXTRA    = 120;             // extra horizontal room before Grand Final
 
-// Unified-only versions of wbGapFor / wbPaddingFor (same formulas, U-constants).
-function uGapFor(r)     { return Math.pow(2, r - 1) * U_SLOT_H - U_CARD_H; }
-function uPaddingFor(r) { return (Math.pow(2, r - 1) - 1) * U_SLOT_H / 2; }
+// Metric sets: live view uses U_METRICS (the constants above); the static
+// Reference/Print view passes its own R_METRICS for print-style proportions.
+// All geometry helpers default to U_METRICS, so existing calls are unchanged.
+const U_METRICS = {
+  colW: U_COL_W, connW: U_CONN_W, cardH: U_CARD_H,
+  slotH: U_SLOT_H, bandSpacer: U_BAND_SPACER, gfExtra: U_GF_EXTRA,
+};
+
+// Unified-only versions of wbGapFor / wbPaddingFor (same formulas, metric-driven).
+function uGapFor(r, M = U_METRICS)     { return Math.pow(2, r - 1) * M.slotH - M.cardH; }
+function uPaddingFor(r, M = U_METRICS) { return (Math.pow(2, r - 1) - 1) * M.slotH / 2; }
 
 // Shared X for a column index on the unified grid (WB and LB use the same column slots).
-function unifiedColumnX(col) { return col * (U_COL_W + U_CONN_W); }
+function unifiedColumnX(col, M = U_METRICS) { return col * (M.colW + M.connW); }
 
 // Top Y for a match card inside a band (roundIndex 1-based, matchIndex 0-based).
-function unifiedMatchY(bandTop, roundIndex, matchIndex) {
-  return bandTop + LABEL_H + uPaddingFor(roundIndex) + matchIndex * (U_CARD_H + uGapFor(roundIndex));
+function unifiedMatchY(bandTop, roundIndex, matchIndex, M = U_METRICS) {
+  return bandTop + LABEL_H + uPaddingFor(roundIndex, M) + matchIndex * (M.cardH + uGapFor(roundIndex, M));
 }
 
 // Column stack height for connector / band sizing.
-function unifiedColumnHeight(roundIndex, numMatches) {
-  return LABEL_H + uPaddingFor(roundIndex) + numMatches * U_CARD_H
-    + Math.max(0, numMatches - 1) * uGapFor(roundIndex) + 10;
+function unifiedColumnHeight(roundIndex, numMatches, M = U_METRICS) {
+  return LABEL_H + uPaddingFor(roundIndex, M) + numMatches * M.cardH
+    + Math.max(0, numMatches - 1) * uGapFor(roundIndex, M) + 10;
 }
 
 // Build positioned nodes + connector specs for the unified canvas (Phase 2A).
-function buildUnifiedLayout(wbCols, lbCols) {
+function buildUnifiedLayout(wbCols, lbCols, M = U_METRICS) {
   const numCols     = lbCols.length;
-  const canvasWidth = numCols * U_COL_W + Math.max(0, numCols - 1) * U_CONN_W;
+  const canvasWidth = numCols * M.colW + Math.max(0, numCols - 1) * M.connW;
   const wbBandTop   = 0;
   // Max over all WB columns — identical to col-0 height for full first
   // columns, but stays correct when play-in filtering shrinks column 0.
   const wbBandHeight = Math.max(...wbCols.map(col =>
-    unifiedColumnHeight(col.roundIndex, col.ids.length)));
+    unifiedColumnHeight(col.roundIndex, col.ids.length, M)));
 
   let mergeLevel = 1;
   let lbBandHeight = 0;
   lbCols.forEach((col, i) => {
     const roundIndex = mergeLevel + 1;
-    lbBandHeight = Math.max(lbBandHeight, unifiedColumnHeight(roundIndex, col.ids.length));
+    lbBandHeight = Math.max(lbBandHeight, unifiedColumnHeight(roundIndex, col.ids.length, M));
     if (i < lbCols.length - 1 && lbCols[i + 1].ids.length < col.ids.length) mergeLevel++;
   });
 
-  const lbBandTop    = wbBandHeight + U_BAND_SPACER;
+  const lbBandTop    = wbBandHeight + M.bandSpacer;
   const canvasHeight = lbBandTop + lbBandHeight;
 
   const nodes = [];
@@ -799,8 +807,8 @@ function buildUnifiedLayout(wbCols, lbCols) {
         matchId,
         band: "wb",
         col: colIdx,
-        x: unifiedColumnX(colIdx),
-        y: unifiedMatchY(wbBandTop, col.roundIndex, matchIndex),
+        x: unifiedColumnX(colIdx, M),
+        y: unifiedMatchY(wbBandTop, col.roundIndex, matchIndex, M),
         roundIndex: col.roundIndex,
       });
     });
@@ -814,8 +822,8 @@ function buildUnifiedLayout(wbCols, lbCols) {
         matchId,
         band: "lb",
         col: colIdx,
-        x: unifiedColumnX(colIdx),
-        y: unifiedMatchY(lbBandTop, roundIndex, matchIndex),
+        x: unifiedColumnX(colIdx, M),
+        y: unifiedMatchY(lbBandTop, roundIndex, matchIndex, M),
         roundIndex,
       });
     });
@@ -829,18 +837,18 @@ function buildUnifiedLayout(wbCols, lbCols) {
   const lbFinalNode = nodes.find(n => n.band === "lb" && n.col === lbCols.length - 1);
   let gfNodes = null;
   if (wbFinalNode && lbFinalNode) {
-    const wbFinalCenterY = wbFinalNode.y + U_CARD_H / 2;
-    const lbFinalCenterY = lbFinalNode.y + U_CARD_H / 2;
-    const gfY  = (wbFinalCenterY + lbFinalCenterY) / 2 - U_CARD_H / 2;
-    const gf1  = { matchId: "GF-1", band: "finals", col: numCols,     x: unifiedColumnX(numCols)     + U_GF_EXTRA,     y: gfY };
-    const gf2  = { matchId: "GF-2", band: "finals", col: numCols + 1, x: unifiedColumnX(numCols + 1) + 2 * U_GF_EXTRA, y: gfY };
+    const wbFinalCenterY = wbFinalNode.y + M.cardH / 2;
+    const lbFinalCenterY = lbFinalNode.y + M.cardH / 2;
+    const gfY  = (wbFinalCenterY + lbFinalCenterY) / 2 - M.cardH / 2;
+    const gf1  = { matchId: "GF-1", band: "finals", col: numCols,     x: unifiedColumnX(numCols, M)     + M.gfExtra,     y: gfY };
+    const gf2  = { matchId: "GF-2", band: "finals", col: numCols + 1, x: unifiedColumnX(numCols + 1, M) + 2 * M.gfExtra, y: gfY };
     nodes.push(gf1, gf2);
     gfNodes = { gf1, gf2, wbFinalNode, lbFinalNode };
   }
 
   return {
     // +28 tail allowance keeps the last match-number span inside the canvas.
-    canvasWidth: canvasWidth + (gfNodes ? 2 * (U_COL_W + U_CONN_W) + 2 * U_GF_EXTRA + 28 : 0),
+    canvasWidth: canvasWidth + (gfNodes ? 2 * (M.colW + M.connW) + 2 * M.gfExtra + 28 : 0),
     canvasHeight,
     wbBandTop,
     lbBandTop,
@@ -851,18 +859,17 @@ function buildUnifiedLayout(wbCols, lbCols) {
 
 // --- Phase 2A-slot: graph-driven, slot-accurate connector endpoints (display only) ---
 
-const SLOT_ROW_H = U_CARD_H / 2;
-
-function unifiedSlotCenterY(nodeY, slotIndex) {
-  return nodeY + slotIndex * SLOT_ROW_H + SLOT_ROW_H / 2;
+function unifiedSlotCenterY(nodeY, slotIndex, M = U_METRICS) {
+  const rowH = M.cardH / 2;
+  return nodeY + slotIndex * rowH + rowH / 2;
 }
 
-function unifiedSourceOutPoint(node) {
-  return { x: node.x + U_COL_W, y: node.y + U_CARD_H / 2 };
+function unifiedSourceOutPoint(node, M = U_METRICS) {
+  return { x: node.x + M.colW, y: node.y + M.cardH / 2 };
 }
 
-function unifiedDestInPoint(node, slotIndex) {
-  return { x: node.x, y: unifiedSlotCenterY(node.y, slotIndex) };
+function unifiedDestInPoint(node, slotIndex, M = U_METRICS) {
+  return { x: node.x, y: unifiedSlotCenterY(node.y, slotIndex, M) };
 }
 
 // winnerTo edges only; skips missing nodes, non-adjacent columns, and Finals (GF-*).
@@ -885,12 +892,12 @@ function buildUnifiedDisplayEdges(matches, nodeById) {
 }
 
 // 3-segment elbow: source out → gap midpoint → dest slot in.
-function unifiedEdgePath(edge, nodeById) {
+function unifiedEdgePath(edge, nodeById, M = U_METRICS) {
   const src = nodeById[edge.sourceId];
   const dst = nodeById[edge.destId];
-  const out = unifiedSourceOutPoint(src);
-  const inn = unifiedDestInPoint(dst, edge.destSlot);
-  const midX = src.x + U_COL_W + U_CONN_W / 2;
+  const out = unifiedSourceOutPoint(src, M);
+  const inn = unifiedDestInPoint(dst, edge.destSlot, M);
+  const midX = src.x + M.colW + M.connW / 2;
   return [
     { x1: out.x, y1: out.y, x2: midX, y2: out.y },
     { x1: midX, y1: out.y, x2: midX, y2: inn.y },
@@ -1205,6 +1212,181 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
   );
 }
 
+// Print-style proportions for the Reference view — much airier than the live
+// board, tuned against the Diamond Scheduler sheet. Display-only.
+const R_METRICS = {
+  colW: 240, connW: 30, cardH: 88,
+  slotH: 88 + 56, bandSpacer: 120, gfExtra: 170,
+};
+
+// Reference / Print View — a static, display-only skin over the same layout
+// data as UnifiedBracketCanvas. No inputs, no handlers, no pit UI: plain text
+// on thin black rules, Diamond Scheduler style. Match data is read-only.
+function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, playerCount }) {
+  const M = R_METRICS;
+  const wbDisplayCols = filterUnifiedPlayInCols(matches, wbCols);
+  const lbDisplayCols = filterUnifiedPlayInCols(matches, lbCols);
+  const layout = buildUnifiedLayout(wbDisplayCols, lbDisplayCols, M);
+  const nodeById = Object.fromEntries(layout.nodes.map(n => [n.matchId, n]));
+  const displayNums = buildUnifiedDisplayNumbers(layout.nodes);
+
+  const allLines = buildUnifiedDisplayEdges(matches, nodeById).flatMap((edge, i) =>
+    unifiedEdgePath(edge, nodeById, M).map((line, j) => ({ ...line, key: `e${i}-${j}` }))
+  );
+  if (layout.gfNodes) {
+    const { gf1, wbFinalNode, lbFinalNode } = layout.gfNodes;
+    [[wbFinalNode, 0], [lbFinalNode, 1]].forEach(([srcNode, slot], i) => {
+      const out  = unifiedSourceOutPoint(srcNode, M);
+      const inn  = unifiedDestInPoint(gf1, slot, M);
+      const midX = gf1.x - M.connW / 2;
+      allLines.push(
+        { key: `gf-${i}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
+        { key: `gf-${i}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
+        { key: `gf-${i}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
+      );
+    });
+  }
+  const dashedLines = [];
+  if (layout.gfNodes) {
+    const { gf1, gf2 } = layout.gfNodes;
+    const out  = unifiedSourceOutPoint(gf1, M);
+    const midX = gf2.x - M.connW / 2;
+    [0, 1].forEach(slot => {
+      const inn = unifiedDestInPoint(gf2, slot, M);
+      dashedLines.push(
+        { key: `rst-${slot}-a`, x1: out.x, y1: out.y, x2: midX, y2: out.y },
+        { key: `rst-${slot}-b`, x1: midX,  y1: out.y, x2: midX, y2: inn.y },
+        { key: `rst-${slot}-c`, x1: midX,  y1: inn.y, x2: inn.x, y2: inn.y },
+      );
+    });
+  }
+
+  const sansFont = "Arial, Helvetica, sans-serif";
+  const TITLE_H = 92;
+  const totalW  = layout.canvasWidth  + 24;
+  const totalH  = layout.canvasHeight + TITLE_H + 24;
+  const viewportRef = useRef(null);
+  const [view, setView] = useState({ scale: 1, maxH: null });
+  useEffect(() => {
+    const measure = () => {
+      const el = viewportRef.current;
+      if (!el) return;
+      const availW = el.clientWidth;
+      const availH = window.innerHeight - 32;
+      const fit = Math.min((availW - 6) / totalW, (availH - 6) / totalH, 1);
+      setView({ scale: Math.max(fit, 0.45), maxH: availH });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [totalW, totalH]);
+  const scale = view.scale;
+
+  return (
+    <div ref={viewportRef} style={{ width: "100%", overflow: "auto", maxHeight: view.maxH ?? undefined }}>
+      <div style={{ width: totalW * scale, height: totalH * scale, margin: "0 auto" }}>
+        <div style={{
+          position: "relative",
+          width: layout.canvasWidth,
+          height: layout.canvasHeight + TITLE_H,
+          background: "#fff",
+          color: "#000",
+          padding: "8px 12px 16px",
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          userSelect: "none",
+        }}>
+          <div style={{
+            position: "absolute", left: 0, top: 14, width: "100%",
+            textAlign: "center", fontSize: 40, fontWeight: 700,
+            fontFamily: sansFont, color: "#000",
+          }}>{playerCount ? `${playerCount} Team Double Elimination` : "Double Elimination"}</div>
+          <div style={{
+            position: "absolute", left: 6, top: TITLE_H + layout.wbBandTop - 4,
+            fontSize: 15, fontFamily: sansFont, color: "#000",
+          }}>Winner's Bracket</div>
+          <div style={{
+            position: "absolute", left: 6, top: TITLE_H + layout.lbBandTop - 22,
+            fontSize: 15, fontFamily: sansFont, color: "#000",
+          }}>Loser's Bracket</div>
+
+          <svg
+            width={layout.canvasWidth}
+            height={layout.canvasHeight}
+            style={{ position: "absolute", top: 8 + TITLE_H, left: 12, pointerEvents: "none", overflow: "visible" }}
+          >
+            <g stroke="#000" strokeWidth={1} fill="none">
+              {allLines.map(line => (
+                <line key={line.key} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+              ))}
+            </g>
+            <g stroke="#000" strokeWidth={1} fill="none" strokeDasharray="6 5">
+              {dashedLines.map(line => (
+                <line key={line.key} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+              ))}
+            </g>
+          </svg>
+          {layout.gfNodes && (
+            <div style={{
+              position: "absolute",
+              left: layout.gfNodes.gf2.x - M.connW + 12,
+              top: TITLE_H + layout.gfNodes.gf2.y + 8 + M.cardH + 32,
+              fontSize: 13, fontFamily: sansFont, color: "#000",
+              whiteSpace: "nowrap",
+            }}>If First Loss</div>
+          )}
+          {layout.nodes.map(node => {
+            const m = matches[node.matchId];
+            const matchScores = scores?.[node.matchId] ?? {};
+            const done = m.winner !== null;
+            return (
+              <div
+                key={node.matchId}
+                style={{ position: "absolute", left: node.x + 12, top: TITLE_H + node.y + 8, width: M.colW }}
+              >
+                {[0, 1].map(i => {
+                  const p = m.slots[i];
+                  const isWinner = done && p?.id === m.winner?.id;
+                  const isLoser  = done && p?.id !== m.winner?.id;
+                  const isBye = p?.isBye;
+                  const isTbd = !p;
+                  const feed = isTbd ? compactFeedLabel(slotSources?.[node.matchId]?.[i], displayNums) : null;
+                  const name = p ? (p.isBye ? "BYE" : p.name) : (feed ?? "");
+                  const score = !isBye && !isTbd ? (matchScores[i] ?? "") : "";
+                  return (
+                    <div key={i} style={{
+                      boxSizing: "border-box", height: M.cardH / 2,
+                      display: "flex", alignItems: "flex-end", gap: 4,
+                      padding: "0 2px 1px 2px", borderBottom: "1px solid #000",
+                    }}>
+                      <span style={{
+                        fontSize: isBye || isTbd ? 9 : 13,
+                        fontFamily: sansFont,
+                        fontStyle: isBye || isTbd ? "italic" : "normal",
+                        fontWeight: isWinner ? 700 : 400,
+                        color: isBye || isTbd ? "#999" : isLoser ? "#888" : "#000",
+                        flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>{name}</span>
+                      {score !== "" && (
+                        <span style={{ fontSize: 9, color: "#666", fontFamily: sansFont, flexShrink: 0 }}>{score}</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {/* Match number — black, baseline just above the output line, like "(9" in the reference */}
+                <span style={{
+                  position: "absolute", left: M.colW + 4, top: M.cardH / 2 - 13,
+                  fontSize: 9, fontFamily: sansFont, color: "#000", whiteSpace: "nowrap",
+                }}>({displayNums[node.matchId]}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -1222,6 +1404,7 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
   const [humanPickMade, setHumanPickMade] = useState(false);
   const [scores,       setScores]       = useState({});
   const [pits,         setPits]         = useState({});
+  const [viewMode,     setViewMode]     = useState("live"); // "live" | "reference"
 
   // Mirrors for reading inside persist without stale closures.
   const scoresRef = useRef({});
@@ -1737,6 +1920,11 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
           <button onClick={handleExport} disabled={exporting} style={goldBtn(exporting)}>
             {exporting ? "Exporting…" : "Export PNG"}
           </button>
+          {USE_UNIFIED_CANVAS && (
+            <button onClick={() => setViewMode(v => v === "live" ? "reference" : "live")} style={goldBtn(false)}>
+              {viewMode === "live" ? "Print View" : "Live View"}
+            </button>
+          )}
           <button onClick={handleUndo} disabled={history.length === 0} style={goldBtn(history.length === 0)}>
             Undo
           </button>
@@ -1848,7 +2036,16 @@ export default function App({ storageKey = STORAGE_KEY, onBack, onBackToSetup, i
       </div>
 
       {/* Bracket sections */}
-      {USE_UNIFIED_CANVAS ? (
+      {USE_UNIFIED_CANVAS && viewMode === "reference" ? (
+        <ReferenceBracketView
+          matches={matches}
+          slotSources={slotSources}
+          wbCols={wbCols}
+          lbCols={lbCols}
+          scores={scores}
+          playerCount={playerCount}
+        />
+      ) : USE_UNIFIED_CANVAS ? (
         <UnifiedBracketCanvas
           matches={matches}
           onPick={handlePick}
