@@ -1215,8 +1215,8 @@ function UnifiedBracketCanvas({ matches, onPick, slotSources, wbCols, lbCols, sc
 // Print-style proportions for the Reference view — much airier than the live
 // board, tuned against the Diamond Scheduler sheet. Display-only.
 const R_METRICS = {
-  colW: 240, connW: 30, cardH: 88,
-  slotH: 88 + 56, bandSpacer: 120, gfExtra: 170,
+  colW: 210, connW: 30, cardH: 56,
+  slotH: 56 + 36, bandSpacer: 72, gfExtra: 100,
 };
 
 // Reference / Print View — a static, display-only skin over the same layout
@@ -1306,7 +1306,7 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
   }
 
   const sansFont = "Arial, Helvetica, sans-serif";
-  const TITLE_H = 92;
+  const TITLE_H = 110;
   const totalW  = layout.canvasWidth  + 24;
   const totalH  = layout.canvasHeight + TITLE_H + 24;
   const viewportRef = useRef(null);
@@ -1318,7 +1318,7 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
       const availW = el.clientWidth;
       const availH = window.innerHeight - 32;
       const fit = Math.min((availW - 6) / totalW, (availH - 6) / totalH, 1);
-      setView({ scale: Math.max(fit, 0.45), maxH: availH });
+      setView({ scale: fit, maxH: availH });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -1341,17 +1341,17 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
           userSelect: "none",
         }}>
           <div style={{
-            position: "absolute", left: 0, top: 14, width: "100%",
-            textAlign: "center", fontSize: 40, fontWeight: 700,
-            fontFamily: sansFont, color: "#000",
+            position: "absolute", left: 0, top: 12, width: "100%",
+            textAlign: "center", fontSize: 58, fontWeight: 700,
+            fontFamily: sansFont, color: "#000", lineHeight: 1.1,
           }}>{playerCount ? `${playerCount} Team Double Elimination` : "Double Elimination"}</div>
           <div style={{
-            position: "absolute", left: 6, top: TITLE_H + layout.wbBandTop - 4,
-            fontSize: 15, fontFamily: sansFont, color: "#000",
+            position: "absolute", left: 12, top: TITLE_H + layout.wbBandTop - 2,
+            fontSize: 18, fontWeight: 700, fontFamily: sansFont, color: "#000",
           }}>Winner's Bracket</div>
           <div style={{
-            position: "absolute", left: 6, top: TITLE_H + layout.lbBandTop - 22,
-            fontSize: 15, fontFamily: sansFont, color: "#000",
+            position: "absolute", left: 12, top: TITLE_H + layout.lbBandTop - 24,
+            fontSize: 18, fontWeight: 700, fontFamily: sansFont, color: "#000",
           }}>Loser's Bracket</div>
 
           <svg
@@ -1401,26 +1401,25 @@ function ReferenceBracketView({ matches, slotSources, wbCols, lbCols, scores, pl
                     <div key={i} style={{
                       boxSizing: "border-box", height: M.cardH / 2,
                       display: "flex", alignItems: "flex-end", gap: 4,
-                      padding: "0 2px 1px 2px", borderBottom: "1px solid #000",
+                      padding: "0 18px 1px 2px", borderBottom: "1px solid #000",
                     }}>
                       <span style={{
-                        fontSize: isBye || isTbd ? 9 : 13,
+                        fontSize: isBye || isTbd ? 8 : 10,
                         fontFamily: sansFont,
                         fontStyle: isBye || isTbd ? "italic" : "normal",
                         fontWeight: isWinner ? 700 : 400,
-                        color: isBye || isTbd ? "#999" : isLoser ? "#888" : "#000",
+                        color: isBye || isTbd ? "#bbb" : isLoser ? "#aaa" : "#000",
                         flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>{name}</span>
                       {score !== "" && (
-                        <span style={{ fontSize: 9, color: "#666", fontFamily: sansFont, flexShrink: 0 }}>{score}</span>
+                        <span style={{ fontSize: 8, color: "#666", fontFamily: sansFont, flexShrink: 0 }}>{score}</span>
                       )}
                     </div>
                   );
                 })}
-                {/* Match number — anchored just inside the line end at the
-                    join, like "(9" in the reference, not in the connector gap */}
+                {/* Match number — at rule boundary, right of the node, inside connector gap */}
                 <span style={{
-                  position: "absolute", right: 4, top: M.cardH / 2 + 1,
+                  position: "absolute", right: -M.connW + 4, top: M.cardH / 2 - 8,
                   fontSize: 9, fontFamily: sansFont, color: "#000", whiteSpace: "nowrap",
                 }}>({displayNums[node.matchId]}</span>
               </div>
